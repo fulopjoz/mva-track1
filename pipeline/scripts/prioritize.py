@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Track 1 stage‑0 collector: genome‑wide honest prior prioritization.
+"""Track 1 variant prioritization: a weighted prior over annotation, rarity and phenotype evidence.
 
 Study collection (conf.variants.input_candidate_defs) runs in parallel against the
 same filtered variant stream. No allele‑frequency gate at collection: rarity enters
@@ -13,9 +13,9 @@ Positive control (expected high score): BUB1B variants p.Leu737Ter stop
 (chr15:40209701 T>G) and p.Asn1002Lys (chr15:40220612 T>G) in a compound‑heterozygous
 state.
 
-V0 contract:
-  - honest first: ALL ranks come from WorkPrior internals; HPO absent = 0
-    contribution (weights renormalise; foreign term stays 0).
+Scoring contract:
+  - ALL ranks come from WorkPrior internals; HPO absent contributes 0
+    (weights renormalise; the foreign term stays 0).
   - instrumented: every cohort‑yield stage prints sizes (filters yield, coding yield,
     rare yield, pair candidates) so anomalies surface.
   - emits the ranked table whose top rows become the challenge submission
