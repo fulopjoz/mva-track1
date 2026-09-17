@@ -1,52 +1,44 @@
 #!/usr/bin/env python3
-"""honesty_ci.py  -  honesty CI suite for the Track 1 pipeline (honesty-forge harness).
+"""honesty_ci.py – CI suite for the Track 1 pipeline using a synthetic “forge”.
 
-Forges a fully synthetic mini-genome (3 chromosomes: 3, 7, 15), 20 decoy
-variants with FAKE phenotype / no-phenotype manifest tags, and one ultrarare
-LoF+missense SENTINEL pair, then runs the committed V0 pipeline scripts
-(imported read-only; pipeline code is never modified) against the forged
-mini-VCF and asserts honesty invariants:
+The *forge* generates a tiny synthetic mini‑genome consisting of three chromosomes
+(3, 7, 15), twenty decoy variants with fake phenotype or no‑phenotype tags, and a
+single ultrarare loss‑of‑function + missense sentinel pair. The pipeline scripts are
+imported read‑only (the CI never modifies pipeline code) and run against the
+forged mini‑VCF, after which a set of honesty invariants are asserted.
 
-  unit checks
-    U01  WorkPrior rarity term is monotone non-increasing in AF (None=neutral)
-    U02  hom-LoF founder/internal strictly > het-LoF
-    U03  CADD gate cannot launder a synonymous variant above a clean het LoF
-    U04  CADD site-not-covered returns None (never 0.0) in the annotator
-    U05  _patho distinguishes cadd_phred=None (neutral) from 0.0 (penalised)
-    U06  foreign_term == 0 at stage s=0 for every forged honest row
+Unit‑check invariants (checked on individual component functions):
+  * U01 – the WorkPrior rarity term never increases as allele frequency (AF)
+    decreases; a missing AF is treated as neutral.
+  * U02 – a homozygous loss‑of‑function founder/internal score is strictly greater
+    than a heterozygous loss‑of‑function score.
+  * U03 – the CADD gate cannot elevate a synonymous variant above a clean heterozygous LoF.
+  * U04 – when the CADD file does not cover a site, the annotator returns ``None``
+    (not ``0.0``).
+  * U05 – the ``_patho`` function distinguishes ``cadd_phred=None`` (neutral)
+    from ``0.0`` (penalised).
+  * U06 – the ``foreign_term`` is zero at stage s = 0 for every forged honest row.
 
-  integration checks
-    I00  annotator consequence of every forged variant matches forge intent
-    I01  forge artifacts built (manifest with per-family seeds)
-    I02  every decoy ranks below the ultrarare LoF+missense sentinel pair
-         (competition ranking; absent-from-output counts as rank=inf)
-    I03  homopolymer-tract frameshift pairs (ZNF717-style) are QC-killed
-    I04  synonymous CADD-high artifacts never enter the collector's pair set
-    I05  FAKE-phenotype vs no-phenotype identical decoys score identically
-    I06  rank-order is shuffle-invariant (chrom/record order 3,7,15 vs 15,7,3)
-    I07  common-AF fam-A pairs drop strictly once --with-af (vcf.py gnomAD
-         join) is wired, against a forge-mirrored synthetic gnomAD; runs on a
-         pos-sorted forge VCF (cursor contract) and SKIP-notes on a V0
-         checkout, keeping the committed V0 green
-    I08  shuffled-input AF pass resolves identically to the sorted run (pins
-         the vcf.py cursor cache fix) AND trips the af_out_of_order_queries
-         instrument instead of silently promoting misses to ultrarare
+Integration‑check invariants (checked after a full pipeline run on the forged data):
+  * I00 – the annotator’s consequence annotation matches the intended forge intent
+    for every variant.
+  * I01 – forge artifacts (manifest and per‑family seeds) are successfully built.
+  * I02 – every decoy ranks below the ultrarare LoF + missense sentinel pair in the
+    competition ranking (decoys absent from output are considered infinite rank).
+  * I03 – homopolymer‑tract frameshift pairs (ZNF717‑style) are removed by the quality‑control step.
+  * I04 – synonymous variants with high CADD scores never enter the collector’s pair set.
+  * I05 – decoys with the FAKE phenotype tag score identically to those without a phenotype tag.
+  * I06 – the rank order is invariant to shuffling of chromosome/record order
+    (e.g., 3, 7, 15 vs 15, 7, 3).
+  * I07 – once the ``--with-af`` join is enabled, common‑AF family‑A pairs drop
+    strictly once, confirming the gnomAD join is correctly wired.
+  * I08 – shuffling input AF values yields identical resolutions to the sorted run
+    and triggers the ``af_out_of_order_queries`` instrument instead of silently
+    promoting misses to ultrarare.
 
-Decoy families (20 decoys, all synthetic, no patient data anywhere):
-  A common-AF LoF+missense pairs in random genes (INFO AF=0.2)      6
-  B homopolymer-tract frameshift pairs, QC-failing alt fraction     6
-  C synonymous CADD-high artifacts (forged CADD phred>=30)          4
-  D identical pair genes, one FAKE-phenotype-tagged, one untagged   4
-
-Why the score margin comes from a forged CADD row: in pure V0 (af=None,
-hpo_score=None, cadd=None) every LoF+missense het pair ties at the same epcr,
-so "strictly below" is only testable once any evidence layer exists. The CI
-forges a tiny CADD bgz covering exactly the sentinel missense (phred 35),
-which is honest CI-referenced evidence, not answer-targeting: production
-confidence must come from the same gated mechanism.
-
-Usage:  python3 pipeline/scripts/honesty_ci.py [--workdir DIR] [--seed N]
-Exit 0 iff every check passes; one line per check on stdout.
+Usage:
+  python3 pipeline/scripts/honesty_ci.py [--workdir DIR] [--seed N]
+Exit code 0 indicates all checks passed; otherwise a line is printed for each failed check.
 """
 from __future__ import annotations
 

@@ -1,17 +1,21 @@
-"""Local per-position variant annotator  -  zero external API calls.
+"""Local per‑position variant annotator – zero external API calls.
 
 Resources (all local, configured via conf/track1_config.yml `refs`):
-  - MANE_Select GTF (tabix)         -> consequence vs canonical transcript
-  - CADD core bgz per chromosome    -> cadd_phred when file covers position
-  - GRCh38 reference FASTA (faidx)  -> codon-level effect (stop_gained etc.)
+  - MANE (Matched Annotation from NCBI and EMBL‑EBI) Select Gene Transfer Format (GTF) file (tabix‑indexed) → consequence vs canonical transcript
+  - CADD (Combined Annotation Dependent Depletion) core bgz files per chromosome → cadd_phred when file covers position
+  - GRCh38 reference FASTA (FAI‑indexed) file → codon‑level effect (stop_gained etc.)
+
+This module processes Variant Call Format (VCF) rows (chrom, pos, ref, alt) and yields
+annotated dictionaries containing gene name, transcript identifier, and predicted
+consequence class.
 
 Design notes:
-  * GTF is parsed once into per-chromosome sorted interval arrays; lookups are
-    bisect-based.
+  * GTF is parsed once into per‑chromosome sorted interval arrays; lookups are
+    bisect‑based.
   * Consequence vocabulary: stop_gained, stop_lost, frameshift, inframe_deletion,
     inframe_insertion, missense_variant, synonymous_variant, splice_donor,
     splice_acceptor, splice_region, 5_prime_utr, 3_prime_utr, intronic, intergenic.
-  * Multi-transcript genes: MANE GTF carries one transcript per gene, so overlap
+  * Multi‑transcript genes: MANE GTF carries one transcript per gene, so overlap
     maps to exactly one transcript.
 """
 from __future__ import annotations

@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
-"""Aggregate exporter (Track 1).
+"""Export aggregated summary statistics for a Track 1 pipeline run.
 
-Reads the ranked table (annot TSV, patient-derived; lives on the compute
-host) and writes figures/aggregates.json: summary numbers only, no
-variant-level rows. The JSON is what the shipped figures are built from
-(figures/make_figures.py), and it is what the README's grep/awk checks
-read. Run on the compute host after a pipeline pass:
+The script reads the ranked annotation TSV (generated on the compute host) and
+writes a JSON file containing only summary numbers – no per‑variant rows. The
+JSON output is read by ``figures/make_figures.py`` to produce the final
+submission figures and is also validated by the README’s grep/awk checks.
+
+Typical usage on the compute host after the pipeline has completed:
 
   python3 pipeline/scripts/export_aggregates.py \
       ~/hf-rare/pipeline/output/annot_full.tsv > figures/aggregates.json
 
-Fields (all integers/floats/strings, all aggregates):
-  n_rows, n_genes: output table size.
-  funnel: record counts per pipeline stage (measured at run time).
-  epcr_hist_edges/counts: histogram of row scores, 20 bins of 0.05.
-  median_epcr, max_epcr: distribution landmarks.
-  type_counts: candidate classes (compound_het pairs vs hom-alt singles).
-  consequence_top: top consequence-class pairs with counts.
-  top10: first 10 ranked rows as [gene, epcr, type].
+Fields (all integers, floats, or strings):
+  * ``n_rows`` – total number of rows in the input table.
+  * ``n_genes`` – count of distinct genes represented.
+  * ``funnel`` – record counts per pipeline stage (measured at runtime).
+  * ``epcr_hist_edges`` / ``epcr_hist_counts`` – histogram of EPCR scores
+    (20 bins of width 0.05).
+  * ``median_epcr`` and ``max_epcr`` – distribution landmarks.
+  * ``type_counts`` – counts of candidate classes (compound‑het pairs vs
+    hom‑alt singles).
+  * ``consequence_top`` – the most frequent consequence‑class pairs with
+    their counts (up to twelve entries).
+  * ``top10`` – the first ten ranked rows as ``[gene, epcr, type]``.
 """
 from __future__ import annotations
 

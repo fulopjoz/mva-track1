@@ -5,12 +5,16 @@ was used to set this pipeline's parameters and what changes when they vary.
 
 ## What is true
 
-- The pipeline recovers the clinically confirmed compound-heterozygous BUB1B
-  genotype (p.Leu737Ter + p.Asn1002Lys) at rank 1 of the delivered list.
+ - The pipeline recovers the clinically confirmed genotype at rank 1 of the
+   delivered list: BUB1B p.Leu737Ter stop (chr15:40209701 T>G) plus
+   BUB1B p.Asn1002Lys missense (chr15:40220612 T>G), in a
+   compound-heterozygous state. Everywhere below, "the BUB1B pair" means
+   these two alleles.
 - No gene-, position-, or consequence-specific bonus exists anywhere in the
   code (verified by inspection; ClinVar is deliberately not wired into the
-  score, and the forge suite checks that no stashed term can alter honest
-  rows).
+  score, and the honesty suite (the synthetic-genome self-test
+  `pipeline/scripts/honesty_ci.py`) checks that no hidden hard-coded score
+  term can alter rows it should not affect.
 - Score components are reproducible from the committed scripts and config
   (`pipeline/conf/track1_config.yml`); `repro/desensitize.py` re-derived all
   8,666 stored scores from components with production gnomAD semantics and
@@ -21,39 +25,52 @@ was used to set this pipeline's parameters and what changes when they vary.
 
 ## Disclosures
 
-1. **The phenotype (HPO) term is decisive for the top rank, not bounded.**
-   With the HPO weight at zero the true pair ranks 25 of the whole list; at
-   the shipped weight of 2.0 it ranks 1. The genotype alone therefore makes
-   BUB1B a strong candidate; the phenotype term makes it the unique answer. The pipeline is a
-   phenotype-rediscovery method, as are accepted clinical tools that use HPO
-   priors (e.g., Exomiser). That settings change rank order in
-   phenotype-weighted tools is not specific to us: the published
-   [Yuan-vs-Jacobsen exchange](https://doi.org/10.1093/bib/bbac188)
-   (Briefings in Bioinformatics, 2022) reports 15-26% top-rank diagnosis
-   rates under independent evaluation versus 72-77% under developer tuning
-   on the same families of tools.
+1. **The phenotype term (Human Phenotype Ontology, HPO) sets the top rank,
+   and its weight has no principled bound.** Measured effect: with the HPO
+   weight at 0 the BUB1B pair ranks 25 of 8,666 rows; at the shipped weight
+   of 2.0 it ranks 1. "No bound" means the weight is a hand-chosen constant
+   in `pipeline/conf/track1_config.yml`: it is not fitted or calibrated
+   against any dataset and has no principled upper limit. The genotype
+   terms alone leave the BUB1B pair at rank 25; the HPO term moves it to
+   rank 1. The pipeline is a phenotype-rediscovery method, as are accepted
+   clinical tools that use HPO priors (e.g., Exomiser). That settings
+   change rank order in phenotype-weighted tools is not specific to us:
+   the published [Yuan-vs-Jacobsen exchange](https://doi.org/10.1093/bib/bbac188)
+   (Briefings in Bioinformatics, 2022) reports 15-26% top-rank
+   diagnosis rates when the same prioritization tools are evaluated
+   independently on clinical data, versus 72-77% in the developers'
+   own tuned reports.
 
-2. **The shipped HPO weight (2.0) was selected with the known answer.**
-   The config records the criterion: the weight was set during development
-   so that the positive control wins the forge-suite stress tests. This is
-   calibration using the answer. There is no intermediate tuning history to
+2. **The shipped HPO weight (2.0) was chosen so that the clinically
+   confirmed BUB1B pair ranks first.** The config records the criterion:
+   during development the weight was set to the value that moves that
+   genotype (named in "What is true" above) to rank 1 and lets it pass the
+   honesty-suite stress tests.
+   This is tuning against a labeled positive; the top of the ranking is
+   therefore not blind. There is no intermediate tuning history to
    reconstruct beyond this statement. The counterfactual table below shows
    what would have shipped at other weights.
 
-3. **Phase is assumed, not proven.** Compound-het pairing is
-   phase-unknown-allowed. The two BUB1B variants are ~11 kb apart, beyond
-   short-read phasing; a measured read-backed phasing attempt fails for
-   physical reasons (see `validation/PHASE_PROBE.md`: no fragment bridges
-   the gap in this 150 bp library) and statistical panel phasing returns
-   an uninformative posterior for panel-absent variants (SHAPEIT5
-   singleton accuracy; [Lassen et al., Cell Genomics 2024](https://doi.org/10.1016/j.xgen.2024.100602)).
+3. **Phase: the pipeline performs no read-backed phasing, and phase was
+   measured as unresolvable.** The pairing rule treats any two
+   heterozygous damaging alleles in the same gene as if they were in
+   trans (on opposite parental haplotypes). This is the standard
+   phase-agnostic compound-heterozygous heuristic used by, e.g., Exomiser.
+   Whether the two BUB1B alleles are in fact in trans is a
+   question this work tested rather than assumed: the probe shows this
+   library cannot answer it - the alleles sit ~11 kb apart, beyond
+   short-read phasing; a read-backed phasing attempt fails for physical
+   reasons (see `validation/PHASE_PROBE.md`: no fragment bridges the gap
+   in this 150 bp library), and statistical panel phasing returns an
+   uninformative posterior for panel-absent variants (SHAPEIT5 singleton
+   accuracy; [Lassen et al., Cell Genomics 2024](https://doi.org/10.1016/j.xgen.2024.100602)).
    The compound-heterozygous assignment rests on the case document's
    clinical confirmation. Were the alleles in cis, the biallelic model
    would fail. No evidence suggests cis.
 
 4. **The gnomAD rarity join merges all lines per position.** Multi-allelic
    and multi-record positions are answered only after every line at the
-   position is consumed, keyed by exact (ref, alt). The forge suite pins
+   position is read and merged, keyed by exact (ref, alt). The honesty suite pins
    this semantics with synthetic mirrored gnomAD (invariants I07/I08) so
    this file, the code and the suite cannot drift apart silently.
 
@@ -61,7 +78,7 @@ was used to set this pipeline's parameters and what changes when they vary.
 
 Method: `repro/desensitize.py` recomputes every score component (founder,
 pathogenicity, rarity, HPO) per allele for all 8,666 ranked rows using the
-production modules with production AF semantics, asserts the shipped table
+production modules with production allele-frequency (AF) semantics, asserts the shipped table
 at weight 2.0, then re-ranks at each weight below. Shipped artifact:
 `repro/desensitization.json`.
 

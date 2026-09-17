@@ -34,18 +34,15 @@ htslib first or use `conda install -c bioconda cyvcf2`.)
 ### 2. Check the code (about one minute, no challenge data needed)
 
 ```bash
-python3 pipeline/scripts/honesty_ci.py          # 15 invariants forge-and-check, must end "0 failure(s)"
+python3 pipeline/scripts/honesty_ci.py          # 15 invariants on synthetic data, must end "0 failure(s)"
 python3 pipeline/scripts/annotate.py            # consequence-calling self-test
 python3 pipeline/scripts/_hpo.py                # HPO scoring self-test
 python3 checks/check_submission_schema.py       # schema + BUB1B-at-rank-1, "ALL CHECKS PASSED"
 python3 figures/make_figures.py                 # rebuilds the diagram and all four data figures from figures/aggregates.json
 ```
 
-The forge suite (`honesty_ci.py`) builds a small synthetic genome with
-decoys and one strong LoF+missense sentinel pair, runs this exact pipeline
-on it, and asserts that decoys cannot outrank the sentinel and that rank
-order cannot depend on record order or phenotype tags. It uses no patient
-data and runs anywhere.
+The honesty suite (`honesty_ci.py`) builds a small synthetic genome with decoys and one LoF+missense sentinel pair, runs this exact pipeline on it, and asserts that decoys cannot outrank the sentinel and that rank order cannot depend on record order or phenotype tags.
+It uses no patient data and runs anywhere.
 
 `annotate.py` and `_hpo.py` check the annotation and phenotype-scoring
 engines. Without the local reference files listed in
@@ -73,12 +70,8 @@ what you see in the PNGs is exactly what is in those shipped text files.
 
 ### 4. Full pipeline run
 
-The complete pass takes the challenge VCF plus the public reference files
-listed in `pipeline/conf/track1_config.yml` (GENCODE v47 MANE, GRCh38
-fasta, gnomAD v4.1 exomes, ClinVar, HPO, OMIM gene-to-phenotype; the CADD
-v1.7 tile set is optional - absent tiles make the score's CADD term neutral,
-and the shipped run was made without them). With all references in place,
-two commands produce the submission CSV:
+The complete pass takes the challenge variant call format (VCF) plus the public reference files listed in `pipeline/conf/track1_config.yml` (GENCODE v47 MANE, GRCh38 fasta, gnomAD v4.1 exomes, ClinVar, Human Phenotype Ontology (HPO), OMIM gene-to-phenotype; the Combined Annotation Dependent Depletion (CADD) v1.7 tile set is optional - absent tiles make the score's CADD term neutral).
+With all references in place, two commands produce the submission CSV:
 
 ```bash
 # VCF -> ranked table (the single 1 h 31 min CPU pass; annotation, rarity

@@ -1,9 +1,14 @@
 End-to-end reproduction check - run of the shipped repo code
 host: dichtator
 date: 2026-09-17 (UTC)
-code: pipeline/ copied verbatim from the repository (scripts renamed from production by comments/labels only)
+code: `pipeline/` copied verbatim from this repository on 2026-09-17. The repository's
+       scripts were later reworded in comments and docstrings, and annotate.py's __main__
+       self-test block gained a named-SKIP guard for absent reference files. Token-level
+       comparison of the copied scripts against the current repository: identical code for
+       _hpo.py, prior.py, prioritize.py, vcf.py, make_submission_csv.py; annotate.py
+       differs only in the self-test guard, which a pipeline run does not execute.
 command: ~/hf-rare/.venv/bin/python pipeline/scripts/prioritize.py --conf pipeline/conf/track1_config.yml --with-af --with-hpo --out /tmp/mva-verify/annot_verify.tsv
-wall-clock: ~1 h 15 min (original production run: 1 h 31 min)
+wall-clock (elapsed time): ~1 h 15 min (original production run: 1 h 31 min).
 
 --- rerun instrumentation (from rerun.log, [instrument] lines) ---
 [instrument] refs_join=on gnomad_dir=/home/fulopj/hf-rare/ref clinvar=True

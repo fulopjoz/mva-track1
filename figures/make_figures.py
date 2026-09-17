@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
-"""Rebuild the data figures from shipped aggregate inputs.
+"""Rebuild the submission figures from the shipped aggregate JSON file.
 
-Inputs (all in this repository):
-  figures/aggregates.json    summary numbers exported by
-                             pipeline/scripts/export_aggregates.py on the
-                             compute host (no variant-level data)
-  provenance.log             measured per-stage record counts (final block first)
-  submission_track1.csv      the submitted ranked-pair table
-  pipeline/conf/track1_config.yml  scoring weights shown on the diagram
+The script loads ``aggregates.json`` (produced by ``export_aggregates.py``) and
+generates four PNG images:
+  * ``fig1_funnel.png`` – pipeline funnel counts.
+  * ``fig2_score_distribution.png`` – histogram of EPCR scores.
+  * ``fig3_top10.png`` – the top‑10 ranked genes with scores.
+  * ``fig4_consequences.png`` – most frequent consequence‑class pairs.
 
-Outputs (this directory): pipeline_diagram.png, fig1_funnel.png,
-fig2_score_distribution.png, fig3_top10.png, fig4_consequences.png.
-
-Run:  python3 figures/make_figures.py
-Requires: python3 + matplotlib + pyyaml (no other dependencies).
+All plots use a non‑interactive Agg backend suitable for headless environments.
 """
 from __future__ import annotations
 
