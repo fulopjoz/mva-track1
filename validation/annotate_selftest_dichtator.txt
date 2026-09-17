@@ -1,0 +1,24 @@
+annotate.py __main__ self-test, recorded result
+host:     dichtator (compute host holding the GRCh38 FASTA)
+date:     2026-09-17 (UTC)
+run-as:   ~/hf-rare/.venv/bin/python /tmp/mva-verify/new/scripts/annotate.py
+          (that file is a verbatim scp copy of the repo's pipeline/scripts/annotate.py)
+sha256 of the recorded script: 23a741cb4c9b03c0affba158b546348540e2eddaaf3046c54cce090e5ff763df
+binding:  the stdout block below is the output of the interpreter named above, run on
+          the host named above on the date above, against the script whose sha256 is
+          recorded above - the three facts describe one and the same execution.
+refs:     ~/hf-rare/ref/gencode.v47.MANE.gtf.gz (conf refs.mane_gtf)
+          ~/hf-rare/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna (conf refs.genome_fasta)
+
+--- verbatim stdout ---
+OK  15:40220612 T>G -> gene=BUB1B tid=ENST00000287598.11 class=missense_variant (want gene=BUB1B tid~ENST00000287598 class=coding)
+OK  15:40181093 AT>A -> gene=BUB1B tid=ENST00000287598.11 class=intronic (want gene=BUB1B tid~ENST00000287598 class=intronic)
+OK  11:95801248 G>A -> gene=CEP57 tid=ENST00000325542.10 class=intronic (want gene=CEP57 tid~ENST00000325542 class=intronic)
+OK  15:40220612 T>G -> missense_variant p.N1002K gene=BUB1B
+OK  15:40209701 T>G -> stop_gained p.L737* gene=BUB1B
+--- end (exit 0) ---
+
+Independent external confirmation of the codon-level call, no FASTA needed:
+ClinVar record at 15:40209701 T>G: ALLELEID 529272,
+CLNHGVS=NC_000015.10:g.40209701T>G, MC=SO:0001587|nonsense,
+CLNSIG=Pathogenic/Likely_pathogenic, RS=759242053 (queried via pysam.TabixFile).

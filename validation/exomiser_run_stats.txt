@@ -1,0 +1,6 @@
+2026-09-06T23:05:19.830+02:00  INFO 2272058 --- [           main] o.m.exomiser.core.Exomiser               : Running analysis using hg38 assembly with mode: PASS_ONLY
+2026-09-06T23:05:19.913+02:00  INFO 2272058 --- [           main] o.m.e.c.analysis.AbstractAnalysisRunner  : Running analysis for proband WGS_EX2312012 (sample 1 in VCF) from samples: [WGS_EX2312012]. Using coordinates for genome assembly hg38.
+2026-09-06T23:05:58.921+02:00  INFO 2272058 --- [           main] o.m.e.c.analysis.AbstractAnalysisRunner  : Analysed sample WGS_EX2312012 with 5007 genes containing 38335 filtered variants
+2026-09-06T23:06:03.961+02:00  INFO 2272393 --- [           main] o.m.exomiser.core.Exomiser               : Running analysis using hg38 assembly with mode: PASS_ONLY
+2026-09-06T23:06:04.026+02:00  INFO 2272393 --- [           main] o.m.e.c.analysis.AbstractAnalysisRunner  : Running analysis for proband WGS_EX2312012 (sample 1 in VCF) from samples: [WGS_EX2312012]. Using coordinates for genome assembly hg38.
+2026-09-06T23:06:55.191+02:00  INFO 2272393 --- [           main] o.m.e.c.analysis.AbstractAnalysisRunner  : Analysed sample WGS_EX2312012 with 13603 genes containing 96734 filtered variants
