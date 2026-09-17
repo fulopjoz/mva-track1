@@ -12,7 +12,6 @@ refs:
   # Present on BOTH hosts; ~ expansion handled per host.
   # CADD per‑chromosome files for variant deleteriousness scoring.
   cadd_dir: ["~/.cadd/v1.7/GRCh38", "/home/dodo/.cadd/v1.7/GRCh38", "~/hf-rare/ref/cadd", "~/Documents/projects/hf-rare/ref/cadd"]
-  cadd_require_cores: 48  # full ~80 GB set only where all cores present
   # MANE (Matched Annotation from NCBI and EMBL‑EBI) GTF file for canonical transcript lookup.
   mane_gtf: "~/hf-rare/ref/gencode.v47.MANE.gtf.gz"  # + .tbi ; synced to hf-rare/ref/ on Qubit
   # Reference genome FASTA (GRCh38 build) for codon‑level effect determination.
@@ -27,12 +26,6 @@ refs:
   clinvar_vcf: "~/hf-rare/ref/clinvar.vcf.gz"  # + .tbi ; synced from Qubit data/
 
 variants:
-  # Stage‑0 collector studies each of these in parallel; BUB1B is the positive control.
-  input_candidate_defs:
-    - "compound-het: LoF het + damaging het in the same gene, no AF gate (rarity enters via the score)"
-    - "homozygous missense candidates, recessive model (all collected; rarity enters via the score)"
-    - "homozygous stop-gain candidates, recessive model (same)"
-    - "homozygous inframe-indel candidates, recessive model (same)"
   # Quality‑control thresholds applied to VCF records.
   qc:
     # Minimum genotype quality (GQ) for a variant to pass QC.

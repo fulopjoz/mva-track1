@@ -47,8 +47,8 @@ measured from the run.
 
 Exomiser 14.0.0 on the same VCF ranks BUB1B first (p = 0.0001) with the
 same eight HPO terms; without phenotype input its top is a 46-way tie that
-still contains BUB1B. Both runs' record (`exomiser_summary.tsv` on the
-analysis host, artifact hashes verified 2026-09-17) are traceable; the
+still contains BUB1B. The records of both runs (`exomiser_summary.tsv` on
+the analysis host, artifact hashes verified 2026-09-17) are traceable; the
 answer is therefore not an artifact of this pipeline's own code.
 
 ## Reproduction

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Track 1 variant prioritization: a weighted prior over annotation, rarity and phenotype evidence.
 
-Study collection (conf.variants.input_candidate_defs) runs in parallel against the
-same filtered variant stream. No allele‑frequency gate at collection: rarity enters
-through the score, not the candidate set.
+Four candidate studies in one pass over the same filtered variant stream. No
+allele‑frequency gate at collection: rarity enters through the score, not the
+candidate set.
   d1 – LoF heterozygous + damaging heterozygous in same gene → compound‑het pairs
   d2 – homozygous missense candidates → recessive singles
   d3 – homozygous stop‑gain candidates → recessive singles
