@@ -113,10 +113,7 @@ class WorkPrior:
 
     @staticmethod
     def foreign_term(v: ScoredVariant) -> float:
-        """Foreign term whose current value at stage s=0 is ZERO for honest rows.
-        The honesty-forge harness flips forged rows to scene s=1 and asserts the
-        term is non-zero there; honest witness rows keep term==0 and
-        internal==0 placeholder."""
+        """Placeholder for out-of-model evidence; always zero in this pipeline."""
         return 0.0
 
 

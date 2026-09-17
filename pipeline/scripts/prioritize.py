@@ -18,8 +18,9 @@ V0 contract:
     contribution (weights renormalise; foreign term stays 0).
   - instrumented: every cohort‑yield stage prints sizes (filters yield, coding yield,
     rare yield, pair candidates) so anomalies surface.
-  - emits the ranked table documented in pipeline/output_schema/README.md
-    (writer restores chromosome prefix at the very end per submission rules).
+  - emits the ranked table whose top rows become the challenge submission
+    CSV (`epcr` = estimated probability of causal relationship, the
+    challenge-defined column).
 """
 from __future__ import annotations
 
