@@ -1,10 +1,5 @@
 # MVA Hackathon 2026 - Track 1 pipeline configuration (single source of truth)
 
-# Remote execution hosts used by the pipeline (e.g., for data transfer or compute).
-hosts:
-  dichtator: "ssh dichtator"
-  meta: "ssh meta"
-
 # Paths and settings for the input VCF and reference genome.
 data:
   vcf: "~/hf-rare/data/WGS_EX2312012_HGWCNDSX7.vcf.gz"  # on dichtator
@@ -68,8 +63,7 @@ phenotype:
 
 # Scoring weights controlling each component’s contribution to the final EPCR score.
 scoring:
-  hpo_weight: 2.0
-  brier_ref: "doi:10.1186/s13059-017-1382-2"
+  hpo_weight: 2.0        # weight of the phenotype-similarity term
   founder_weight: 0.45
   pathogenicity_weight: 0.60
   rare_weight: 0.30
@@ -79,10 +73,3 @@ output:
   write_dir: "~/hf-rare/pipeline/output"          # per-host override allowed
   track1_csv_columns: ["proband_id","chrom_1","pos_1","ref_1","alt_1",
                        "chrom_2","pos_2","ref_2","alt_2","epcr","finding_type","notes"]
-
-# Compliance and governance settings (no patient data to external APIs, AI disclosure, etc.).
-compliance:
-  no_patient_data_to_external_apis: true
-  genai_disclosure: "Agent-built pipeline (Kimi K3 via Oh My Pi); no training on customer content; patient data stays on whitelisted hosts."
-  leaderboard_submissions: "HUMAN ONLY  -  never automated"
-  brier_note: "Track 1 is scored on the F-max formula per challenge rules; we optimise F-max, not just Hit@1."
