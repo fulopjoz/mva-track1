@@ -9,8 +9,8 @@ data:
 
 # Reference files used by the pipeline (paths may be host‑specific).
 refs:
-  # Present on BOTH hosts; ~ expansion handled per host.
-  # CADD per‑chromosome files for variant deleteriousness scoring.
+  # CADD per‑chromosome files for variant deleteriousness scoring; first existing
+  # directory in the list wins (prioritize.py); absent tiles make the CADD term neutral.
   cadd_dir: ["~/.cadd/v1.7/GRCh38", "/home/dodo/.cadd/v1.7/GRCh38", "~/hf-rare/ref/cadd", "~/Documents/projects/hf-rare/ref/cadd"]
   # MANE (Matched Annotation from NCBI and EMBL‑EBI) GTF file for canonical transcript lookup.
   mane_gtf: "~/hf-rare/ref/gencode.v47.MANE.gtf.gz"  # + .tbi ; synced to hf-rare/ref/ on Qubit
