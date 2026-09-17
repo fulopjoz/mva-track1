@@ -55,10 +55,10 @@ answer is therefore not an artifact of this pipeline's own code.
 
 Python 3.12 with pysam, cyvcf2, pyyaml. References (paths in
 `pipeline/conf/track1_config.yml`): GENCODE v47 MANE, GRCh38 FASTA, gnomAD
-v4.1 exome sites, ClinVar, HPO with the OMIM gene-to-phenotype map. The
-CADD v1.7 option exists in the code but its tile set was not installed for
-this run, so all CADD fields in the ranked table are empty and the term is
-neutral.
+v4.1 exome sites, ClinVar, HPO with the OMIM gene-to-phenotype map.
+Pathogenicity comes from consequence class; CADD v1.7 scores are used when
+local tiles cover a site, and none did in this run, so the CADD term is
+neutral and all CADD fields in the ranked table are empty.
 
 ```bash
 python3 pipeline/scripts/prioritize.py \
