@@ -1,6 +1,6 @@
 """Local per‑position variant annotator – zero external API calls.
 
-Resources (all local, configured via conf/track1_config.yml `refs`):
+Resources (all local, configured via pipeline/conf/track1_config.yml `refs`):
   - MANE (Matched Annotation from NCBI and EMBL‑EBI) Select Gene Transfer Format (GTF) file (tabix‑indexed) → consequence vs canonical transcript
   - CADD (Combined Annotation Dependent Depletion) core bgz files per chromosome → cadd_phred when file covers position
   - GRCh38 reference FASTA (FAI‑indexed) file → codon‑level effect (stop_gained etc.)

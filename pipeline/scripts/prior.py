@@ -9,7 +9,7 @@ weighted sum of four concrete components:
   * **rare** – rarity estimate from gnomAD allele frequency.
   * **hpo** – phenotype similarity score from Human Phenotype Ontology (HPO).
 Component weights (founder_weight, pathogenicity_weight, rare_weight, hpo_weight)
-are read from `conf/track1_config.yml`; they control each term’s contribution to
+are read from `pipeline/conf/track1_config.yml`; they control each term’s contribution to
 the final ``epcr`` score placed in the challenge column.
 """
 from __future__ import annotations
@@ -51,7 +51,7 @@ class WorkPrior:
             'rare': s['rare_weight'],
             'hpo': s['hpo_weight'],
         }
-# Component weight semantics (read from conf/track1_config.yml):
+# Component weight semantics (read from pipeline/conf/track1_config.yml):
 #   founder_weight – relative importance of the founder (LoF) term
 #   pathogenicity_weight – relative importance of the pathogenicity term
 #   rare_weight – relative importance of the rarity term
