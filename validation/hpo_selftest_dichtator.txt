@@ -1,0 +1,21 @@
+_hpo.py __main__ self-test, recorded result
+host:     dichtator (compute host holding the GRCh38 FASTA)
+date:     2026-09-17 (UTC)
+run-as:   ~/hf-rare/.venv/bin/python /tmp/mva-verify/new/scripts/_hpo.py
+          (that file is a verbatim scp copy of the repo's pipeline/scripts/_hpo.py)
+sha256 of the recorded script: 89a2f86441bf11195c169d99ef998ac7f6f176c5daa3942e2412ad67a9cef99f
+binding:  the stdout block below is the output of the interpreter named above, run on
+          the host named above on the date above, against the script whose sha256 is
+          recorded above - the three facts describe one and the same execution.
+refs:     ~/hf-rare/ref/hp.obo (conf refs.hp_obo)
+          ~/hf-rare/ref/hpo_gene_to_phenotype.tsv (conf refs.hpo_map)
+
+--- verbatim stdout ---
+BUB1B 0.625
+CEP57 0.625
+ZNF717 0.000
+--- end (exit 0) ---
+
+Note: 0.625 is the V0 WorkPrior HPO-similarity term (5 of 8 proband terms
+credited under ancestor closure). It is not comparable to the Exomiser-scale
+scores in exomiser_summary.tsv; the two scales are listed separately by design.
