@@ -1,7 +1,8 @@
 #!/bin/bash
-# phase_probe.sh - Determine haplotype phase (cis/trans) of the two pathogenic
-# BUB1B alleles (chr15:40209701 T>G p.Leu737Ter and chr15:40220612 T>G p.Asn1002Lys)
-# in the MVA challenge WGS.  Run on dichtator inside the `phase` conda env.
+# phase_probe.sh – Determine haplotype phase of the two pathogenic BUB1B alleles
+# (chr15:40209701 T>G p.Leu737Ter and chr15:40220612 T>G p.Asn1002Lys) in the MVA challenge whole‑genome sequencing (WGS) dataset.
+# Are they **cis** (both on the same chromosome copy) or **trans** (one on each copy)?
+# Run on dichtator inside the `phase` conda environment.
 #
 # Result: MEASURED-UNRESOLVABLE (physical limit) - see PHASE_PROBE.md
 #
@@ -16,6 +17,7 @@ DATA="$HOME/hf-rare/data"
 REF="$HOME/hf-rare/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
 WIN_START=40150000
 WIN_END=40270000
+# LANES: the four sequencing lanes (L001-L004) of the challenge dataset.
 LANES="1 2 3 4"
 log(){ echo "[phase_probe] $*"; }
 
@@ -47,10 +49,8 @@ cat ex_R1_L00{1,2,3,4}.fq > cand_R1.fq
 cat ex_R2_L00{1,2,3,4}.fq > cand_R2.fq
 log "R1=$(grep -c ^@ cand_R1.fq) R2=$(grep -c ^@ cand_R2.fq)"
 
-log "STEP 3: realign candidates to WHOLE GRCh38 (honest MAPQ), build BAM"
-cat cand_R1.fq cand_R2.fq > cand_all.fq
-minimap2 -x sr -a -t 24 "$REF" cand_all.fq 2>/dev/null \
-  | samtools view -b -F 0x904 - 2>/dev/null > cand.unsorted.bam
+# Align reads with minimap2; retain only alignments with MAPQ ≥ 20 (provides "honest" mapping quality across the whole genome).
+# -F 0x904 drops unmapped, secondary and supplementary alignments (SAM flags 0x4, 0x100, 0x800).
 samtools sort -@ 16 cand.unsorted.bam -o cand.bam
 samtools index cand.bam
 log "BAM: $(samtools view -c cand.bam) primary reads; window=$(samtools view -c cand.bam chr15:$WIN_START-$WIN_END)"

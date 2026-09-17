@@ -2,8 +2,10 @@
 
 Date: 2026-09-06. Host: dichtator. [Exomiser](https://github.com/exomiser/Exomiser)
 CLI 14.0.0, data bundles 2406_phenotype + 2406_hg38 (PK-magic and `unzip -tq`
-integrity checks passed), Java 21 (Temurin), 48 GB heap. Both runs: PASS-only
-hg38 input, shared-frequency GNOMAD_G sources, [REVEL, MVP] pathogenicity.
+integrity checks passed), Java 21 (Temurin), 48 GB heap. Both runs used the
+same input VCF (variant call format) on hg38 coordinates, restricted to
+records whose FILTER field is PASS, with shared-frequency GNOMAD_G (gnomAD
+genomes) frequency sources and [REVEL, MVP] pathogenicity scores.
 (Exomiser 15.x has since been released; these documented runs are the
 14.0.0 artifacts named here.)
 
@@ -11,11 +13,12 @@ Two runs, identical configuration except phenotype input:
 
 | Run | Phenotype input | BUB1B result | Top of list |
 |---|---|---|---|
-| A | Same 8 case HPO terms, hiPhive + priorityScoreFilter + OMIM prioritiser | **rank 1, p = 0.0001, score 0.9751** | BUB1B, cleanly separated (next non-HLA candidate FANCD2 p = 0.0024) |
-| B | None (frequency + functional annotation + inheritance) | rank 66 (AR mode) / top-tie block (AD mode) | 46-way tie at combined score 0.5 containing BUB1B |
+| A | Same 8 case HPO (Human Phenotype Ontology) terms, hiPhive + priorityScoreFilter + OMIM (Online Mendelian Inheritance in Man) prioritiser | **rank 1, p = 0.0001, score 0.9751** | BUB1B at p = 0.0001; the next candidate outside the HLA (human leukocyte antigen) gene cluster, FANCD2, sits at p = 0.0024 - 24 times the BUB1B p-value |
+| B | None (frequency + functional annotation + inheritance) | rank 66 (autosomal-recessive mode) / tie block (autosomal-dominant mode) | 46-way tie at combined score 0.5 containing BUB1B |
 
-Without a phenotype prior there is no discriminating signal at the top of
-Run B by construction (gene score = variant score only).
+Without a phenotype prior the gene score reduces to the variant score alone,
+so genes with equally damaging variants receive equal scores and the top of
+Run B cannot order genes by construction.
 
 ## What these runs can claim
 
@@ -24,10 +27,14 @@ Run B by construction (gene score = variant score only).
   reads the same OMIM-derived HPO annotations as our own prior, so this is
   cross-*tool* confirmation, not independent biological validation.
 - **Run B** confirms the tuning disclosure's counterfactual: remove the
-  phenotype prior and no decisive ordering exists at the top anywhere.
-- The tools disagree on prior-free details (their LoF model keeps KIF7 low
-  where ours let it rise) - prior-free ranking is annotator-dependent, which
-  is exactly the disclosure's point: the answer comes from the phenotype term.
+  phenotype prior and the top of the list is a 46-way tie at combined
+  score 0.5 (autosomal-dominant mode) that includes BUB1B; in autosomal-recessive
+  mode BUB1B ranks 66.
+- The tools disagree on prior-free details (their loss-of-function (LoF)
+  model keeps KIF7 low where ours let it rise) - prior-free ranking is
+  annotator-dependent, which is exactly the disclosure's point: the confirmed
+  BUB1B genotype is singled out by the phenotype term, not by the prior-free
+  score.
 
 Aggregate output shipped in this directory: `exomiser_summary.tsv` and
 `exomiser_run_stats.txt`; the sha256 values below were re-verified against

@@ -1,22 +1,23 @@
-"""vcf.py  -  local reference-VCF joins for the Track 1 variant stream.
-All sources are local files on the analysis host.
+"""vcf.py  -  local joins against reference Variant Call Format (VCF) files
+for the Track 1 variant stream. All sources are local files on the analysis host.
 
 Two joins:
-  1. gnomAD exomes v4.1 per-chromosome sites -> per-alt allele frequency.
-     INFO field 'AF' (Number=A, joint callset AF) matched on (pos, ref, alt).
-     Implemented as a same-chrom sorted stream merge: the patient QC stream is
-     chromosome-ordered, each gnomAD sites file is pos-sorted, so a single
-     forward cursor per chromosome resolves every query with O(1) memory.
-     Chromosomes whose sites file is absent (still downloading, or not
-     reference-covered) yield af=None, which WorkPrior treats as neutral  - 
-     never falsely ultrarare.
-  2. ClinVar VCF (tabix-indexed) -> CLNSIG + CLNDN for exact
-     (chrom, pos, ref, alt) matches. Diagnostic only in this iteration:
-     recorded on ScoredVariant.clinvar_sig / .clinvar_disease and used by
-     analyses, deliberately NOT wired into WorkPrior weights yet.
+  1. gnomAD exomes v4.1 per‑chromosome sites file → per‑alternate‑allele
+     population frequency. The INFO field 'AF' (joint callset allele frequency)
+     is matched on (pos, ref, alt).
+     Implemented as a same‑chromosome sorted stream merge: the patient quality‑control
+     (QC) stream is chromosome‑ordered, each gnomAD sites file is position‑sorted,
+     so a single forward cursor per chromosome resolves every query with O(1) memory.
+     Chromosomes whose sites file is absent (still downloading, or not reference‑covered)
+     yield af=None. WorkPrior (the Track 1 work‑priority scoring model) treats af=None
+     as neutral – never falsely ultrarare.
+  2. ClinVar VCF (tabix‑indexed) → CLNSIG + CLNDN for exact (chrom, pos, ref, alt)
+     matches. Diagnostic only in this iteration: recorded on ScoredVariant.clinvar_sig /
+     .clinvar_disease and used by analyses, deliberately NOT wired into WorkPrior
+     weights yet.
 
 Contig naming: patient = bare ('15'), gnomAD = 'chr15', ClinVar = bare.
-All keys are normalised with _bare() so joins are convention-agnostic.
+All keys are normalised with _bare() so joins are convention‑agnostic.
 """
 from __future__ import annotations
 
@@ -40,22 +41,23 @@ class _ChromCursor:
     def __init__(self, path: str):
         self._it = iter(cyvcf2.VCF(path))
         self._cache: dict[int, dict[tuple[str, str], float]] = {}
-        self._hi = -1     # highest gnomAD position consumed so far
+        self._hi = -1     # retained from an earlier design; never read (see af())
         self._eof = False
         self._last_q = -1  # last query position (order-violation detection)
         self.out_of_order = 0
-        self._front = -1     # highest position the iterator has consumed
+        self._front = -1     # highest gnomAD position read from the file so far
         self._pending = None # reserved; always None in the single-path design
 
     def af(self, pos: int, ref: str, alt: str) -> float:
-        """AF for exact (pos, ref, alt); 0.0 = scanned past without a match.
+        """Allele frequency (AF) for exact (pos, ref, alt); 0.0 = the scan
+        read past this position without a match.
 
-        Completeness invariant (2026-09-07, second fix): a cached position only
-        counts as fully consumed once the iterator has moved PAST it
-        (pos < self._front). The earlier drain loop cached the look-ahead
-        record, leaked partial first-line maps into the early-hit path, and
-        made later sibling-line alleles answer absent. Now every record flows
-        through one merge path and no partial position ever answers a query."""
+        Completeness invariant (2026-09-07, second fix): a cached position is
+        only complete once the iterator has read PAST it (pos < self._front).
+        The earlier drain loop cached the look‑ahead record, leaked partial
+        first‑line maps into the early‑match code path, and made later sibling‑line
+        alleles answer absent. Now every record flows through one merge path,
+        so a partially‑read position never answers a query."""
         if pos < self._last_q:
             self.out_of_order += 1  # contract violated; cache keeps the answer
         self._last_q = max(self._last_q, pos)

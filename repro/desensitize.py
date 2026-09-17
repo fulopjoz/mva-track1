@@ -1,11 +1,15 @@
-#!/usr/bin/env python3
-"""Reproduction and desensitization for the shipped Track 1 table.
+"""Reproduction and desensitization for the shipped Track 1 result table.
 
-Audits every stored score by rebuilding components with production-faithful
-gnomAD semantics (streaming merge at each position, exact REF/ALT keying, no
-index files), asserts equality at the production weight, then sweeps the HPO
-weight. Audit artifact: requires the whitelisted analysis host (annot_full.tsv
-and public references). Set HF_RARE_HOME to override the host data path."""
+The script reads the pipeline’s output ``annot_full.tsv`` (a tab‑separated values
+file), recomputes the EPCR scores using the exact production semantics, and
+verifies that the reproduced scores match the shipped values within a tight
+tolerance. It then emits a JSON payload containing the production‑semantics
+rankings for several HPO‑weight settings.
+
+Environment variables:
+  * ``HF_RARE_HOME`` – optional path to the local HF‑Rare repository; defaults to
+    ``~/hf-rare``.
+"""
 import csv
 import os
 import sys

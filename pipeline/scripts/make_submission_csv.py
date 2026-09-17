@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Emit a Track 1 submission CSV from a pipeline annot_*.tsv.
+"""Emit a Track 1 submission CSV file from a pipeline‑generated TSV.
 
 Schema (exact, per official template):
-  proband_id,chrom_1,pos_1,ref_1,alt_1,chrom_2,pos_2,ref_2,alt_2,epcr,finding_type,notes
+  proband_id, chrom_1, pos_1, ref_1, alt_1, chrom_2, pos_2, ref_2, alt_2,
+  epcr, finding_type, notes
 
 Rules:
-  - proband_id = PROBAND01 (dataset README / template).
-  - Coordinates gain the 'chr' prefix HERE and only here (pipeline uses bare
-    contigs internally; submission template shows chr1/chr15 style).
-  - <= 10 rows, ranked by pipeline epcr (TSV order is already rank order).
-  - Row 1 (top pair) = finding_type primary; remaining rows primary if they
-    are additional compound-het candidates, secondary for hom_alt singles
-    unless --secondary-all. Compound-het pairs share one row (both alleles).
-  - epcr ∈ (0, 1]: clamp pipeline scores.
+  * ``proband_id`` is a fixed identifier (e.g. ``PROBAND01``) defined in the
+    dataset README/template.
+  * Chromosome coordinates acquire the ``chr`` prefix *here*; the internal
+    pipeline uses bare contig names.
+  * Output is limited to a maximum of ten rows, ranked by the pipeline EPCR
+    score (the TSV order already reflects ranking).
+  * Row 1 (top pair) receives ``finding_type`` = ``primary``; subsequent rows
+    are ``primary`` only for additional compound‑heterozygous candidates, otherwise ``secondary`` unless ``--secondary-all`` is used.
+  * Compound‑heterozygous pairs share a single row (both alleles listed).
+  * ``epcr`` values are clamped to the open interval (0, 1] before formatting.
 
 Usage:
   make_submission_csv.py --in annot_full.tsv --out submission_track1.csv [--rows 10]

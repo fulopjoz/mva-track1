@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Verify submission_track1.csv matches the challenge schema and invariants.
+"""Verify that ``submission_track1.csv`` conforms to the Track 1 submission
+schema and satisfies all required invariants.
 
-Checks (all must pass):
-  1. Header is exactly the challenge template header.
-  2. Exactly 10 data rows, all for PROBAND01.
-  3. Chromosomes carry the `chr` prefix; positions are positive integers.
-     (Allele 1 / allele 2 order within a row is not constrained by the template.)
-  4. epcr is a probability in [0, 1] and rows are sorted by epcr descending.
-  5. finding_type is in {primary, secondary}.
-  6. Rank 1 is the expected BUB1B compound-heterozygous finding
-     (chr15:40209701 T>G + chr15:40220612 T>G).
+Checks performed (all must pass):
+  1. Header row matches the official challenge template exactly.
+  2. Exactly ten data rows are present, each with ``PROBAND01`` as the proband ID.
+  3. Chromosome fields contain the ``chr`` prefix and positions are positive
+     integers (allele order within a row is unrestricted).
+  4. ``epcr`` values are probabilities in the interval [0, 1] and rows are sorted
+     by descending ``epcr``.
+  5. ``finding_type`` is either ``primary`` or ``secondary``.
+  6. The top‑ranked row is the expected BUB1B compound‑heterozygous finding with
+     coordinates ``chr15:40209701 T>G`` and ``chr15:40220612 T>G``.
 
-Exit 0 and print OK lines; exit 1 on the first failed check.
+The script exits with status 0 and prints ``OK`` messages when all checks succeed,
+or exits with status 1 on the first failure, printing a descriptive ``FAIL`` line.
 """
 import csv
 import re

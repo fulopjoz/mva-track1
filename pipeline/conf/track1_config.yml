@@ -1,45 +1,62 @@
-# MVA Hackathon 2026  -  Track 1 pipeline configuration (single source of truth)
+# MVA Hackathon 2026 - Track 1 pipeline configuration (single source of truth)
+
+# Remote execution hosts used by the pipeline (e.g., for data transfer or compute).
 hosts:
   dichtator: "ssh dichtator"
   meta: "ssh meta"
 
+# Paths and settings for the input VCF and reference genome.
 data:
-  vcf: "~/hf-rare/data/WGS_EX2312012_HGWCNDSX7.vcf.gz"        # on dichtator
-  vcf_chr_prefix: false                                        # contigs are '15' (no 'chr')
+  vcf: "~/hf-rare/data/WGS_EX2312012_HGWCNDSX7.vcf.gz"  # on dichtator
+  vcf_chr_prefix: false  # contigs are '15' (no 'chr')
   sample: "WGS_EX2312012"
   build: "GRCh38"
 
+# Reference files used by the pipeline (paths may be host‑specific).
 refs:
-  # present on BOTH hosts; ~ expansion handled per host
+  # Present on BOTH hosts; ~ expansion handled per host.
+  # CADD per‑chromosome files for variant deleteriousness scoring.
   cadd_dir: ["~/.cadd/v1.7/GRCh38", "/home/dodo/.cadd/v1.7/GRCh38", "~/hf-rare/ref/cadd", "~/Documents/projects/hf-rare/ref/cadd"]
-  cadd_require_cores: 48      # full ~80 GB set only where all cores present
-  mane_gtf: "~/hf-rare/ref/gencode.v47.MANE.gtf.gz"            # + .tbi ; synced to hf-rare/ref/ on Qubit
+  cadd_require_cores: 48  # full ~80 GB set only where all cores present
+  # MANE (Matched Annotation from NCBI and EMBL‑EBI) GTF file for canonical transcript lookup.
+  mane_gtf: "~/hf-rare/ref/gencode.v47.MANE.gtf.gz"  # + .tbi ; synced to hf-rare/ref/ on Qubit
+  # Reference genome FASTA (GRCh38 build) for codon‑level effect determination.
   genome_fasta: "~/hf-rare/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna"
+  # Human Phenotype Ontology (HPO) OBO file for phenotype similarity.
   hp_obo: "~/hf-rare/ref/hp.obo"
-  hpo_map: "~/hf-rare/ref/hpo_gene_to_phenotype.tsv"           # built by fetch script
-  gnomad_v41_exomes_dir: "~/hf-rare/ref"                       # per-chrom sites bgz; Absent chrom file -> AF neutral (vcf.py)
-  clinvar_vcf: "~/hf-rare/ref/clinvar.vcf.gz"                  # + .tbi ; synced from Qubit data/
+  # Mapping of gene↔HPO term IDs.
+  hpo_map: "~/hf-rare/ref/hpo_gene_to_phenotype.tsv"  # built by fetch script
+  # gnomAD v4.1 exomes per‑chromosome sites BGZ files; missing files imply neutral AF.
+  gnomad_v41_exomes_dir: "~/hf-rare/ref"
+  # ClinVar VCF file (tabix‑indexed) for known clinical variant annotations.
+  clinvar_vcf: "~/hf-rare/ref/clinvar.vcf.gz"  # + .tbi ; synced from Qubit data/
 
 variants:
+  # Stage‑0 collector studies each of these in parallel; BUB1B is the positive control.
   input_candidate_defs:
-    # stage-0 collector studies each of these in parallel; BUB1B is the positive control
     - "compound-het: LoF het + damaging het in the same gene, no AF gate (rarity enters via the score)"
     - "homozygous missense candidates, recessive model (all collected; rarity enters via the score)"
     - "homozygous stop-gain candidates, recessive model (same)"
     - "homozygous inframe-indel candidates, recessive model (same)"
+  # Quality‑control thresholds applied to VCF records.
   qc:
+    # Minimum genotype quality (GQ) for a variant to pass QC.
     min_gq: 20
+    # Minimum read depth (DP) for a variant to pass QC.
     min_dp: 10
+    # Minimum alternate allele fraction (alt_frac) for a heterozygous call to pass QC.
     min_alt_frac: 0.25
+  # Rarity thresholds: max_rare is the allele‑frequency cutoff for “rare”; max_ultrarare for “ultrarare”.
   af:
     max_rare: 0.01
     max_ultrarare: 0.0001
-    source_preference: ["gnomad_v41_exomes", "topmed", "exac", "thousand_genomes", "clinvar_only"]
+  # Effect term lists used by WorkPrior to classify variant consequences.
   effect:
     lof_terms: ["stop_gained", "frameshift", "splice_donor", "splice_acceptor"]
     missense_terms: ["missense_variant"]
     inframe_terms: ["inframe_deletion", "inframe_insertion"]
-    exploit_cadd_if_available: true   # annotator adds cadd_phred when a local file covers the site
+    # If a local CADD file covers a variant site, its CADD score is added to the annotation.
+    exploit_cadd_if_available: true
   pairing:
     compound_het_rule: "same_gene, >=2 founders, no hom-alt, phase-unknown-ok"
     same_gene_only: true
@@ -49,20 +66,22 @@ phenotype:
   hpo_terms: ["HP:0002859","HP:0000121","HP:0004322","HP:0001508",
               "HP:0003202","HP:0001622","HP:0001518","HP:0200067"]
 
+# Scoring weights controlling each component’s contribution to the final EPCR score.
 scoring:
   hpo_weight: 2.0      # >=1.0 => BUB1B (positive control) at rank 1 (see repro/desensitization.json)
-  brier_ref: "doi:10.1186/s13059-017-1382-2"   # Smedley 2017 Bayesian feat-sel MoI model
+  brier_ref: "doi:10.1186/s13059-017-1382-2"   # Smedley 2017 Bayesian feat‑sel MoI model
   founder_weight: 0.45
   pathogenicity_weight: 0.60
   rare_weight: 0.30
   honesty_guard: "HPO weight above inheritance+variant evidence by design; overfit guard tests must not rely on it"
 
+# Output directory for generated files; CSV column order matches the challenge schema.
 output:
-  # schema contract ships as pipeline/output_schema/README.md in this repo (docs only, no code reads a schema_dir key)
   write_dir: "~/hf-rare/pipeline/output"          # per-host override allowed
   track1_csv_columns: ["proband_id","chrom_1","pos_1","ref_1","alt_1",
                        "chrom_2","pos_2","ref_2","alt_2","epcr","finding_type","notes"]
 
+# Compliance and governance settings (no patient data to external APIs, AI disclosure, etc.).
 compliance:
   no_patient_data_to_external_apis: true
   genai_disclosure: "Agent-built pipeline (Kimi K3 via Oh My Pi); no training on customer content; patient data stays on whitelisted hosts."

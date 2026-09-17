@@ -1,12 +1,16 @@
-"""Composable work-prior for Track 1 variant/candidate ranking.
+"""Composable work‑prior for Track 1 variant/candidate ranking.
 
-`WorkPrior.internal` maps an evidence record (dicts from annotate.py /
-vcf.py / hpo.py) to a prior-probability-of-causing-disease in (0, 1], EPCR
-compatible. The mix is ordinance-free: weights come from conf/track1_config.yml.
-
-Inherit theoretical frame: founder (mutation class x zygosity evidence),
-pathogenicity (effect + CADD), rarity (gnomAD), phenotype (HPO semantic
-similarity  -  still theoretical; validated empirically by honesty forge harness).
+`WorkPrior.internal` maps an evidence record (dicts from annotate.py, vcf.py, and
+to a prior probability of disease causality in (0, 1] that is reported in the challenge's ``epcr`` column — an estimated probability of causal relationship (float in (0, 1]).
+weighted sum of four concrete components:
+  * **founder** – prior that a loss‑of‑function (LoF) allele exists in the gene
+    (based on zygosity and mutation class).
+  * **patho** – pathogenicity estimate derived from consequence type and CADD score.
+  * **rare** – rarity estimate from gnomAD allele frequency.
+  * **hpo** – phenotype similarity score from Human Phenotype Ontology (HPO).
+Component weights (founder_weight, pathogenicity_weight, rare_weight, hpo_weight)
+are read from `conf/track1_config.yml`; they control each term’s contribution to
+the final ``epcr`` score placed in the challenge column.
 """
 from __future__ import annotations
 
@@ -26,7 +30,7 @@ class ScoredVariant:
     cadd_phred: float | None = None
     af: float | None = None
     hpo_score: float | None = None    # 0..1 gene-phenotype similarity
-    internal: float = 0.0             # final prior (the EPCR backbone)
+    internal: float = 0.0             # final ``epcr`` score placed in the challenge column
     foreign: float = 0.0              # computed but INACTIVE at s=0; means zero
 
 
@@ -47,12 +51,15 @@ class WorkPrior:
             'rare': s['rare_weight'],
             'hpo': s['hpo_weight'],
         }
+# Component weight semantics (read from conf/track1_config.yml):
+#   founder_weight – relative importance of the founder (LoF) term
+#   pathogenicity_weight – relative importance of the pathogenicity term
+#   rare_weight – relative importance of the rarity term
+#   hpo_weight – relative importance of the phenotype (HPO) term
         self.exploit_cadd = v['effect']['exploit_cadd_if_available']
 
     def _founder(self, v: ScoredVariant) -> float:
-        """Zygosity x mutation-class evidence. Hom LoF strongest; het LoF/missense
-        weaker (could be dominant or one half of a compound het  -  pairing module
-        resolves that later)."""
+        """The founder term estimates the prior probability that a loss‑of‑function allele exists in the gene, based on the variant's zygosity and mutation class."""
         c = (v.consequence or '').split('|')[0]
         lof = c in self.lof_terms
         miss = c in self.missense_terms

@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
-"""Track 1 stage-0 collector: genome-wide honest prior prioritization.
+"""Track 1 stage‑0 collector: genome‑wide honest prior prioritization.
 
-Study collection (conf.variants.input_candidate_defs), each collected in
-parallel against the same filtered stream. No allele-frequency gate at
-collection: rarity enters through the score, not the candidate set.
-  d1  LoF het + damaging het in same gene -> compound-het pairs
-  d2  homozygous missense candidates      -> recessive singles
-  d3  homozygous stop-gain candidates     -> recessive singles
-  d4  homozygous inframe-indel candidates -> recessive singles
+Study collection (conf.variants.input_candidate_defs) runs in parallel against the
+same filtered variant stream. No allele‑frequency gate at collection: rarity enters
+through the score, not the candidate set.
+  d1 – LoF heterozygous + damaging heterozygous in same gene → compound‑het pairs
+  d2 – homozygous missense candidates → recessive singles
+  d3 – homozygous stop‑gain candidates → recessive singles
+  d4 – homozygous inframe‑indel candidates → recessive singles
+
+Positive control (expected high score): BUB1B variants p.Leu737Ter stop
+(chr15:40209701 T>G) and p.Asn1002Lys (chr15:40220612 T>G) in a compound‑heterozygous
+state.
 
 V0 contract:
   - honest first: ALL ranks come from WorkPrior internals; HPO absent = 0
     contribution (weights renormalise; foreign term stays 0).
-  - instrumented: every cohort-yield stage prints sizes (filters yield,
-    coding yield, rare yield, pair candidates) so anomalies surface.
+  - instrumented: every cohort‑yield stage prints sizes (filters yield, coding yield,
+    rare yield, pair candidates) so anomalies surface.
   - emits the ranked table documented in pipeline/output_schema/README.md
-    (writer does chr-prefix restore at the very end per submission rules).
+    (writer restores chromosome prefix at the very end per submission rules).
 """
 from __future__ import annotations
 

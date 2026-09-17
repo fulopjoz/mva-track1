@@ -1,14 +1,14 @@
-_hpo.py __main__ self-test, recorded result
-host:     dichtator (compute host holding the GRCh38 FASTA)
+_hpo.py __main__ self-test (built‑in check cases run when the script is executed directly), recorded result
+host:     dichtator (compute host that holds the GRCh38 reference genome sequence in FASTA format)
 date:     2026-09-17 (UTC)
 run-as:   ~/hf-rare/.venv/bin/python /tmp/mva-verify/new/scripts/_hpo.py
-          (that file is a verbatim scp copy of the repo's pipeline/scripts/_hpo.py)
-sha256 of the recorded script: 89a2f86441bf11195c169d99ef998ac7f6f176c5daa3942e2412ad67a9cef99f
+          (a byte‑identical scp copy of the repository’s `pipeline/scripts/_hpo.py`).
+sha256 of the recorded script: 92d6386fd7ef5182b164900f7579a58f8151062a2e3b4ad13d1bae8058869407
 binding:  the stdout block below is the output of the interpreter named above, run on
           the host named above on the date above, against the script whose sha256 is
           recorded above - the three facts describe one and the same execution.
-refs:     ~/hf-rare/ref/hp.obo (conf refs.hp_obo)
-          ~/hf-rare/ref/hpo_gene_to_phenotype.tsv (conf refs.hpo_map)
+refs:     ~/hf-rare/ref/hp.obo (conf refs.hp_obo; Human Phenotype Ontology (HPO) term graph in OBO format)
+          ~/hf-rare/ref/hpo_gene_to_phenotype.tsv (conf refs.hpo_map; gene‑to‑phenotype annotation table).
 
 --- verbatim stdout ---
 BUB1B 0.625

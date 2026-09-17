@@ -1,14 +1,14 @@
-annotate.py __main__ self-test, recorded result
-host:     dichtator (compute host holding the GRCh38 FASTA)
+annotate.py __main__ self-test (built‑in check cases run when the script is executed directly), recorded result
+host:     dichtator (compute host that holds the GRCh38 reference genome sequence in FASTA format)
 date:     2026-09-17 (UTC)
 run-as:   ~/hf-rare/.venv/bin/python /tmp/mva-verify/new/scripts/annotate.py
-          (that file is a verbatim scp copy of the repo's pipeline/scripts/annotate.py)
-sha256 of the recorded script: 23a741cb4c9b03c0affba158b546348540e2eddaaf3046c54cce090e5ff763df
+          (a byte‑identical scp copy of the repository’s `pipeline/scripts/annotate.py`).
+sha256 of the recorded script: 883960564b033dcdfc0712f21f48bf7d09ce9df3d4d9d0a2aff58cfbe73fd34e
 binding:  the stdout block below is the output of the interpreter named above, run on
           the host named above on the date above, against the script whose sha256 is
           recorded above - the three facts describe one and the same execution.
-refs:     ~/hf-rare/ref/gencode.v47.MANE.gtf.gz (conf refs.mane_gtf)
-          ~/hf-rare/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna (conf refs.genome_fasta)
+refs:     ~/hf-rare/ref/gencode.v47.MANE.gtf.gz (conf refs.mane_gtf; GENCODE v47 MANE gene annotation in GTF – Gene Transfer Format)
+          ~/hf-rare/ref/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna (conf refs.genome_fasta; GRCh38 reference sequence without alternate contigs).
 
 --- verbatim stdout ---
 OK  15:40220612 T>G -> gene=BUB1B tid=ENST00000287598.11 class=missense_variant (want gene=BUB1B tid~ENST00000287598 class=coding)

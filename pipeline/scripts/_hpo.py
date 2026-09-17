@@ -1,14 +1,13 @@
-"""HPO phenotype similarity  -  refs-only, zero patient data.
+"""HPO phenotype similarity – reference-only, zero patient data.
 
-Reads AT RUNTIME (files may arrive after code is written):
-  refs.hp_obo   : hp.obo  -  is_a hierarchy for ancestor closure
-  refs.hpo_map  : hpo_gene_to_phenotype.tsv  -  gene \t hpo_id \t hpo_name (built by fetch script)
+Reads at runtime (files may appear after code is written):
+  refs.hp_obo   : hp.obo  – Human Phenotype Ontology (HPO) is_a hierarchy for ancestor closure
+  refs.hpo_map  : hpo_gene_to_phenotype.tsv  – gene \t hpo_id \t hpo_name (built by fetch script)
 
-V0 scorer: ancestor-closure overlap. For each proband term, credit 1.0 if the
-gene's ancestor-closed term set contains it, 0.5 if it contains a proband
-term's parent (one generalisation step), else 0. Gene score = mean over
-proband terms. Crude by design  -  information-content weighting is a backlog
-item for the calibration pass.
+Version 0 scorer: for each proband term, credit 1.0 if the gene's ancestor‑closed term set
+contains it, 0.5 if it contains a direct parent (one generalisation step), otherwise 0.
+Gene score is the mean over proband terms. This simple overlap method is implemented now;
+information‑content weighting is planned for a future calibration pass.
 """
 from __future__ import annotations
 
