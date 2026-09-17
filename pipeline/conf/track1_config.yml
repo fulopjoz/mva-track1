@@ -68,12 +68,11 @@ phenotype:
 
 # Scoring weights controlling each component’s contribution to the final EPCR score.
 scoring:
-  hpo_weight: 2.0      # >=1.0 => BUB1B (positive control) at rank 1 (see repro/desensitization.json)
-  brier_ref: "doi:10.1186/s13059-017-1382-2"   # Smedley 2017 Bayesian feat‑sel MoI model
+  hpo_weight: 2.0
+  brier_ref: "doi:10.1186/s13059-017-1382-2"
   founder_weight: 0.45
   pathogenicity_weight: 0.60
   rare_weight: 0.30
-  honesty_guard: "HPO weight above inheritance+variant evidence by design; overfit guard tests must not rely on it"
 
 # Output directory for generated files; CSV column order matches the challenge schema.
 output:

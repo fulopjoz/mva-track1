@@ -255,8 +255,7 @@ if __name__ == '__main__':
     fasta = os.path.expanduser(conf['refs']['genome_fasta'])
     have_fasta = os.path.exists(fasta)
     if not os.path.exists(gtf):
-        print(f"SKIP all checks: GENCODE MANE GTF absent on this host (conf refs.mane_gtf = {gtf});"
-              " recorded result: validation/annotate_selftest_dichtator.txt")
+        print(f"SKIP all checks: GENCODE MANE GTF absent on this host (conf refs.mane_gtf = {gtf})")
         raise SystemExit(0)
     a = LocalAnnotator(gtf, genome_fasta=fasta if have_fasta else None)
     # tier 1 (GTF only, runs everywhere): gene/transcript identification and
@@ -287,7 +286,7 @@ if __name__ == '__main__':
     for c, p, r, alt, want in codon_checks:
         if not have_fasta:
             print(f"SKIP codon-level {c}:{p} {r}>{alt} (want {want}): GRCh38 FASTA absent on this host"
-                  " (conf refs.genome_fasta); recorded result: validation/annotate_selftest_dichtator.txt")
+                  " (conf refs.genome_fasta)")
             continue
         got = a.annotate(c, p, r, [alt])[0]
         status = 'OK' if got['consequence'] == want else 'FAIL'

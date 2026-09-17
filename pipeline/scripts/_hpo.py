@@ -83,7 +83,7 @@ if __name__ == '__main__':
     hpo_map = os.path.expanduser(conf['refs']['hpo_map'])
     if not (os.path.exists(hp_obo) and os.path.exists(hpo_map)):
         print(f"SKIP hpo scoring: refs absent on this host ({hp_obo}, {hpo_map});"
-              " recorded result: validation/hpo_selftest_dichtator.txt")
+'')
         sys.exit(0)
     terms = conf['phenotype']['hpo_terms']
     s = HPOScorer(hp_obo, hpo_map, terms)
