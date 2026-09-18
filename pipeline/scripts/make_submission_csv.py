@@ -12,8 +12,8 @@ Rules:
     pipeline uses bare contig names.
   * Output is limited to a maximum of ten rows, ranked by the pipeline EPCR
     score (the TSV order already reflects ranking).
-  * Row 1 (top pair) receives ``finding_type`` = ``primary``; subsequent rows
-    are ``primary`` only for additional compound‑heterozygous candidates, otherwise ``secondary`` unless ``--secondary-all`` is used.
+  * ``finding_type`` is ``primary`` for compound‑heterozygous pairs and
+    ``secondary`` for homozygous single‑variant candidates.
   * Compound‑heterozygous pairs share a single row (both alleles listed).
   * ``epcr`` values are clamped to the open interval (0, 1] before formatting.
 
@@ -54,13 +54,6 @@ def main():
             ])
             if len(out) >= args.rows:
                 break
-
-    # exactly one primary row is allowed to carry the top rank; others stay
-    # primary only if distinct pairs  -  template permits multiple primaries,
-    # but F-max punishes noise: keep top-1 primary, demote the rest.
-    for i, r in enumerate(out):
-        if i > 0 and r[10] == 'primary':
-            r[10] = 'primary'
 
     with open(args.outfile, 'w', newline='') as fh:
         w = csv.writer(fh)
