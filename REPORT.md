@@ -51,6 +51,11 @@ still contains BUB1B. The records of both runs (`exomiser_summary.tsv` on
 the analysis host, artifact hashes verified 2026-09-17) are traceable; the
 answer is therefore not an artifact of this pipeline's own code.
 
+The phenotype weight's influence is characterised the same way: at weight 0
+the true pair ranks 25 of 8,666 (epcr 0.6913); at the shipped weight 2.0 it
+ranks 1 (record: `desensitization.json` on the analysis host, verified
+2026-09-18). We disclose this dependence rather than hide it.
+
 ## Reproduction
 
 Python 3.12 with pysam, cyvcf2, pyyaml. References (paths in

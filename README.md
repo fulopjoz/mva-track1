@@ -36,6 +36,11 @@ python3 pipeline/scripts/make_submission_csv.py \
     --in output/annot_full.tsv --out submission_track1.csv
 ```
 
+This regenerates all typed columns (positions, refs, alts, scores, finding_type)
+verbatim. The `notes` column of the shipped `submission_track1.csv` was phrased
+by hand for the judges; the generator emits a compact `gene=...;consequence/...`
+string in its place.
+
 Quick checks without a full run:
 
 ```bash
