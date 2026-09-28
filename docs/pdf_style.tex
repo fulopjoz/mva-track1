@@ -1,0 +1,28 @@
+% Professional PDF styling for the technical documentation (pandoc + xelatex).
+% Fixes: oversized default margins (whitespace), table cells overflowing the
+% text block, weak heading hierarchy.
+\usepackage[a4paper,margin=17mm,top=16mm,bottom=16mm]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\definecolor{ink}{HTML}{1F3B5C}   % single navy accent, matches the diagrams
+\definecolor{rule}{HTML}{2F4B6E}
+\usepackage[htt]{hyphenat}        % allow line breaking inside \texttt (paths, column lists)
+\usepackage{seqsplit}             % fallback breaking for long unhyphenated strings
+\usepackage{xurl}                 % breakable \url
+\usepackage{sectsty}
+\sectionfont{\color{ink}}
+\subsectionfont{\color{ink}}
+\subsubsectionfont{\color{ink}}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\emergencystretch}{1.5em}   % absorb overfull lines gracefully
+\usepackage{etoolbox}
+\AtBeginEnvironment{longtable}{\small\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{1.12}}
+\usepackage{needspace}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+% colored links without red boxes
+\AtBeginDocument{\hypersetup{colorlinks=true,linkcolor=ink,urlcolor=ink,citecolor=ink}}
