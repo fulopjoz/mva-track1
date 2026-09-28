@@ -5,11 +5,17 @@ Deterministic, argv-free matplotlib generator. All numbers shown are quoted
 from repo artifacts (REPORT.md, README.md, pipeline/conf/track1_config.yml,
 pipeline/scripts/*.py). Output is written next to this script.
 
+Self-gate: after drawing, every registered text artist is measured
+(renderer window extent -> data coordinates via ax.transData.inverted())
+against its container box. Any overflow raises SystemExit(1) BEFORE the
+file is written, so a layout regression can never ship silently.
+
 Run:  python3 docs/figures/build_fig_pipeline.py
 """
 from __future__ import annotations
 
 import os
+import sys
 
 import matplotlib
 
@@ -36,11 +42,58 @@ BOXH = 10.8
 # before the last row hosts the intermediate-artifact node
 ROWS = [104.0, 92.0, 80.0, 68.0, 56.0, 44.0, 32.0, 14.2]
 
+# chip band geometry: chip occupies b+0.8 .. b+2.3; body text must stay
+# above b + CHIP_BODY_FLOOR so it can never strike through the chip
+CHIP_Y0, CHIP_H = 0.8, 1.5
+CHIP_BODY_FLOOR = 2.6
+
 # intermediate artifact node between ranking (row 6) and CSV (row 7)
 ART_X0, ART_X1 = 30.0, 78.0
 ART_TOP, ART_H = 19.8, 4.4
 
+# ------------------------------------------------------------------- gate ---
+_GATE: list[tuple] = []
+GATE_MARGIN = 0.2  # data units of slack allowed outside a container
 
+
+def _gate(text, box, name):
+    """Register a text artist for the post-draw overflow gate.
+
+    box = (x0, y0, x1, y1) in data coordinates; the text's measured extent
+    must stay inside the box expanded by GATE_MARGIN on every side.
+    """
+    _GATE.append((text, box, name))
+
+
+def run_gate(fig, ax):
+    """Measure every registered text; SystemExit(1) on any overflow.
+
+    Window extents come from the Agg renderer and are converted to data
+    coordinates with ax.transData.inverted(), so the comparison is exact
+    in the coordinate system the boxes are laid out in. Runs BEFORE
+    savefig: on failure no PNG is written.
+    """
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    inv = ax.transData.inverted()
+    failures = []
+    for text, (bx0, by0, bx1, by1), name in _GATE:
+        bb = inv.transform_bbox(text.get_window_extent(renderer=renderer))
+        if (bb.x0 < bx0 - GATE_MARGIN or bb.x1 > bx1 + GATE_MARGIN
+                or bb.y0 < by0 - GATE_MARGIN or bb.y1 > by1 + GATE_MARGIN):
+            failures.append(
+                f"{name}: text extent ({bb.x0:.2f}, {bb.y0:.2f})-"
+                f"({bb.x1:.2f}, {bb.y1:.2f}) escapes box "
+                f"({bx0:.2f}, {by0:.2f})-({bx1:.2f}, {by1:.2f})")
+    if failures:
+        for f in failures:
+            print(f"GATE FAIL: {f}", file=sys.stderr)
+        raise SystemExit(1)
+    print(f"GATE OK: {len(_GATE)} text artists within their boxes "
+          f"(margin {GATE_MARGIN})")
+
+
+# ------------------------------------------------------------------ layout ---
 def row(i: int) -> tuple[float, float]:
     """(y_top, y_bottom) of pipeline stage box i (0-based, top row first)."""
     t = ROWS[i]
@@ -53,27 +106,37 @@ def stage_box(ax, i, title, lines, chip=None, tool=None):
     Layout inside the box (height 10.8 units, 1 unit = 0.1 in):
       title + tool annotation  top ~3.7 units
       body text                next ~3.5 units (two 9.3 pt lines)
-      chip band                bottom 2.3 units, reserved - never hosts body text
+      chip band                bottom 2.3 units, reserved - never hosts body
+    The overflow gate enforces both containment and body/chip separation:
+    body text is registered against the box EXCLUDING the chip strip.
     """
     t, b = row(i)
     ax.add_patch(FancyBboxPatch(
         (X0, b), X1 - X0, t - b,
         boxstyle="round,pad=0,rounding_size=0.9",
         facecolor=STAGE_FILL, edgecolor=STAGE_EDGE, lw=1.4, zorder=2))
-    ax.text(X0 + 1.6, t - 1.6, title, ha="left", va="top",
-            fontsize=11, fontweight="bold", color=STAGE_HEAD, zorder=3)
-    ax.text(X1 - 1.6, t - 1.6, tool or "", ha="right", va="top",
-            fontsize=9, style="italic", color=MUTED, zorder=3)
-    ax.text(X0 + 1.6, t - 4.2, "\n".join(lines), ha="left", va="top",
-            fontsize=9.3, color="#24303C", linespacing=1.35, zorder=3)
+    ttl = ax.text(X0 + 1.6, t - 1.6, title, ha="left", va="top",
+                  fontsize=11, fontweight="bold", color=STAGE_HEAD, zorder=3)
+    _gate(ttl, (X0, b, X1, t), f"stage {i} title")
+    if tool:
+        tol = ax.text(X1 - 1.6, t - 1.6, tool, ha="right", va="top",
+                      fontsize=9, style="italic", color=MUTED, zorder=3)
+        _gate(tol, (X0, b, X1, t), f"stage {i} tool")
+    body_bottom = b + CHIP_BODY_FLOOR if chip else b
+    bod = ax.text(X0 + 1.6, t - 4.2, "\n".join(lines), ha="left", va="top",
+                  fontsize=9.3, color="#24303C", linespacing=1.35, zorder=3)
+    _gate(bod, (X0, body_bottom, X1, t), f"stage {i} body")
     if chip:
-        # dedicated bottom strip: body text stops ~1 unit above the chip
+        # dedicated bottom strip: chip rect and its gated text
+        cx0, cy0 = X0 + 1.4, b + CHIP_Y0
+        chip_box = (cx0, cy0, cx0 + 27.0, cy0 + CHIP_H)
         ax.add_patch(FancyBboxPatch(
-            (X0 + 1.4, b + 0.8), 27.0, 1.5,
+            (cx0, cy0), 27.0, CHIP_H,
             boxstyle="round,pad=0,rounding_size=0.5",
             facecolor=CHIP_FILL, edgecolor=CHIP_EDGE, lw=1.0, zorder=3))
-        ax.text(X0 + 2.3, b + 1.55, chip, ha="left", va="center",
-                fontsize=8.6, color=STAGE_EDGE, zorder=4)
+        ct = ax.text(cx0 + 0.9, cy0 + CHIP_H / 2, chip, ha="left", va="center",
+                     fontsize=8.6, color=STAGE_EDGE, zorder=4)
+        _gate(ct, chip_box, f"stage {i} chip")
 
 
 def flow_arrow(ax, y_from, y_to, x=None):
@@ -91,8 +154,9 @@ def ref_box(ax, y_top, h, lines, target_i, dy=0.0):
         (x0, y_top - h), x1 - x0, h,
         boxstyle="round,pad=0,rounding_size=0.7",
         facecolor=REF_FILL, edgecolor=REF_EDGE, lw=1.2, zorder=2))
-    ax.text(x0 + 1.4, y_top - 1.3, "\n".join(lines), ha="left", va="top",
-            fontsize=8.8, color=REF_TEXT, linespacing=1.35, zorder=3)
+    rt = ax.text(x0 + 1.4, y_top - 1.3, "\n".join(lines), ha="left", va="top",
+                 fontsize=8.8, color=REF_TEXT, linespacing=1.35, zorder=3)
+    _gate(rt, (x0, y_top - h, x1, y_top), f"ref box {lines[0][:18]!r}")
     # dashed feed arrow from reference box to the pipeline stage
     t, b = row(target_i)
     yc = (t + b) / 2 + dy
@@ -113,18 +177,22 @@ def main() -> None:
     ax.set_xlim(0, W)
     ax.set_ylim(0, H)
     ax.axis("off")
+    canvas_box = (0.0, 0.0, W, H)
 
     # ---- title -------------------------------------------------------------
-    ax.text(W / 2, 112.5, "MVA Hackathon 2026 - Track 1 variant-prioritization pipeline",
-            ha="center", va="center", fontsize=14, fontweight="bold", color="#16222E")
-    ax.text(W / 2, 108.8, "patient WGS VCF  \u2192  ranked variant table  \u2192  submission CSV  "
-            "\u00b7  single pass, all joins against local reference files",
-            ha="center", va="center", fontsize=10, color=MUTED)
+    ttl = ax.text(W / 2, 112.5, "MVA Hackathon 2026 - Track 1 variant-prioritization pipeline",
+                  ha="center", va="center", fontsize=14, fontweight="bold",
+                  color="#16222E")
+    _gate(ttl, canvas_box, "figure title")
+    sub = ax.text(W / 2, 108.8, "patient WGS VCF  \u2192  ranked variant table  \u2192  submission CSV  "
+                 "\u00b7  single pass, all joins against local reference files",
+                 ha="center", va="center", fontsize=10, color=MUTED)
+    _gate(sub, canvas_box, "figure subtitle")
 
     # ---- pipeline stages (top to bottom) -----------------------------------
     stage_box(
         ax, 0, "Proband WGS VCF",
-        ["5,012,204 records \u00b7 GRCh38 \u00b7 bgzipped VCF, bare contig names (conf: data.vcf)"],
+        ["5,012,204 records \u00b7 GRCh38 \u00b7 bgzipped VCF \u00b7 bare contig names (data.vcf)"],
         chip=None, tool=None)
     stage_box(
         ax, 1, "Quality-control filter",
@@ -139,7 +207,7 @@ def main() -> None:
     stage_box(
         ax, 3, "Rarity and ClinVar join",
         ["gnomAD v4.1 exomes AF, exact (pos, ref, alt), sorted per-chromosome merge;",
-         "af=None \u21d2 neutral, 0.0 \u21d2 ultrarare \u00b7 ClinVar CLNSIG/CLNDN as background only"],
+         "af=None \u21d2 neutral, 0.0 \u21d2 ultrarare \u00b7 ClinVar: background evidence only"],
         chip="vcf.py :: GnomadAfJoin \u00b7 ClinVarJoin", tool="pysam.TabixFile")
     stage_box(
         ax, 4, "HPO phenotype term",
@@ -154,7 +222,7 @@ def main() -> None:
     stage_box(
         ax, 6, "Candidate pairing and ranking",
         ["compound-het pairs: LoF het \u00d7 damaging het, same gene, phase unknown",
-         "\u2014 2,372 pairs \u00b7 hom-alt singles, internal > 0.3 \u2014 6,294 \u00b7 8,666 ranked rows"],
+         "2,372 pairs \u00b7 hom-alt singles, internal > 0.3 \u2192 6,294 \u00b7 8,666 rows"],
         chip="prioritize.py :: main", tool=None)
     stage_box(
         ax, 7, "Submission CSV",
@@ -162,7 +230,7 @@ def main() -> None:
          "epcr formatted to 4 decimals, clamped to (0, 1]"],
         chip="make_submission_csv.py", tool=None)
 
-    # arrows between consecutive stage boxes (rows 0-6 -> 1-7)
+    # arrows between consecutive stage boxes (rows 0-5 -> 1-6)
     for i in range(6):
         _, b = row(i)
         t2, _ = row(i + 1)
@@ -176,12 +244,14 @@ def main() -> None:
         boxstyle="round,pad=0,rounding_size=0.6",
         facecolor=ART_FILL, edgecolor=ART_EDGE, lw=1.2,
         linestyle=(0, (3, 2)), zorder=2))
-    ax.text((ART_X0 + ART_X1) / 2, ART_TOP - 1.5, "output/annot_full.tsv",
-            ha="center", va="center", fontsize=9.4, fontweight="bold",
-            color="#3A3A3A", family="monospace", zorder=3)
-    ax.text((ART_X0 + ART_X1) / 2, ART_TOP - 3.0,
-            "ranked table \u00b7 16 columns \u00b7 8,666 rows",
-            ha="center", va="center", fontsize=8.8, color=MUTED, zorder=3)
+    at1 = ax.text((ART_X0 + ART_X1) / 2, ART_TOP - 1.5, "output/annot_full.tsv",
+                  ha="center", va="center", fontsize=9.4, fontweight="bold",
+                  color="#3A3A3A", family="monospace", zorder=3)
+    _gate(at1, (ART_X0, ART_TOP - ART_H, ART_X1, ART_TOP), "artifact filename")
+    at2 = ax.text((ART_X0 + ART_X1) / 2, ART_TOP - 3.0,
+                  "ranked table \u00b7 16 columns \u00b7 8,666 rows",
+                  ha="center", va="center", fontsize=8.8, color=MUTED, zorder=3)
+    _gate(at2, (ART_X0, ART_TOP - ART_H, ART_X1, ART_TOP), "artifact subtitle")
     flow_arrow(ax, b6 - 0.25, ART_TOP + 0.25)          # ranking -> artifact
     flow_arrow(ax, ART_TOP - ART_H - 0.25, row(7)[0] + 0.25)  # artifact -> CSV
 
@@ -201,14 +271,19 @@ def main() -> None:
 
     # ---- configuration (left column) -----------------------------------------
     cx0, cx1, cy0, cy1 = 2.0, 22.0, 30.0, 88.0
+    conf_box = (cx0, cy0, cx1, cy1)
     ax.add_patch(FancyBboxPatch(
         (cx0, cy0), cx1 - cx0, cy1 - cy0,
         boxstyle="round,pad=0,rounding_size=0.9",
         facecolor=CONF_FILL, edgecolor=CONF_EDGE, lw=1.4, zorder=2))
-    ax.text((cx0 + cx1) / 2, cy1 - 1.8, "pipeline/conf/", ha="center", va="top",
-            fontsize=9.6, fontweight="bold", color=CONF_TEXT, family="monospace")
-    ax.text((cx0 + cx1) / 2, cy1 - 3.4, "track1_config.yml", ha="center", va="top",
-            fontsize=9.6, fontweight="bold", color=CONF_TEXT, family="monospace")
+    ct1 = ax.text((cx0 + cx1) / 2, cy1 - 1.8, "pipeline/conf/", ha="center",
+                  va="top", fontsize=9.6, fontweight="bold", color=CONF_TEXT,
+                  family="monospace")
+    _gate(ct1, conf_box, "config title line 1")
+    ct2 = ax.text((cx0 + cx1) / 2, cy1 - 3.4, "track1_config.yml", ha="center",
+                  va="top", fontsize=9.6, fontweight="bold", color=CONF_TEXT,
+                  family="monospace")
+    _gate(ct2, conf_box, "config title line 2")
     conf_lines = [
         "QC thresholds",
         "(GQ 20 / DP 10 / alt 0.25)",
@@ -227,8 +302,10 @@ def main() -> None:
         "reference paths",
         "(refs.*)",
     ]
-    ax.text(cx0 + 1.5, cy1 - 6.2, "\n".join(conf_lines), ha="left", va="top",
-            fontsize=8.4, color=CONF_TEXT, linespacing=1.45, zorder=3)
+    ctb = ax.text(cx0 + 1.5, cy1 - 6.2, "\n".join(conf_lines), ha="left",
+                  va="top", fontsize=8.4, color=CONF_TEXT, linespacing=1.45,
+                  zorder=3)
+    _gate(ctb, conf_box, "config body")
     for target_i in (1, 4, 5, 6):
         t, b = row(target_i)
         yc = (t + b) / 2
@@ -241,24 +318,30 @@ def main() -> None:
     lx, ly = X0 + 1.0, 0.9
     for dx, fc, ec, lbl in (
             (0.0, STAGE_FILL, STAGE_EDGE, "pipeline stage"),
-            (19.0, REF_FILL, REF_EDGE, "local reference input"),
-            (42.5, CONF_FILL, CONF_EDGE, "configuration"),
-            (60.0, ART_FILL, ART_EDGE, "output artifact")):
+            (14.5, REF_FILL, REF_EDGE, "local reference input"),
+            (33.0, CONF_FILL, CONF_EDGE, "configuration"),
+            (46.5, ART_FILL, ART_EDGE, "output artifact")):
         ax.add_patch(FancyBboxPatch(
             (lx + dx, ly), 2.6, 1.8, boxstyle="round,pad=0,rounding_size=0.3",
             facecolor=fc, edgecolor=ec, lw=1.1))
-        ax.text(lx + dx + 3.4, ly + 0.9, lbl, ha="left", va="center",
-                fontsize=8.8, color="#24303C")
+        lt = ax.text(lx + dx + 3.4, ly + 0.9, lbl, ha="left", va="center",
+                     fontsize=8.0, color="#24303C")
+        _gate(lt, canvas_box, f"legend label {lbl!r}")
     ax.add_patch(FancyArrowPatch(
-        (lx + 77.0, ly + 0.9), (lx + 81.5, ly + 0.9), arrowstyle="-|>",
+        (lx + 60.5, ly + 0.9), (lx + 65.0, ly + 0.9), arrowstyle="-|>",
         mutation_scale=11, lw=1.6, color=STAGE_EDGE))
-    ax.text(lx + 82.5, ly + 0.9, "data flow", ha="left", va="center",
-            fontsize=8.8, color="#24303C")
+    lt = ax.text(lx + 66.0, ly + 0.9, "data flow", ha="left", va="center",
+                 fontsize=8.0, color="#24303C")
+    _gate(lt, canvas_box, "legend label 'data flow'")
     ax.add_patch(FancyArrowPatch(
-        (lx + 92.0, ly + 0.9), (lx + 96.5, ly + 0.9), arrowstyle="-|>",
+        (lx + 74.5, ly + 0.9), (lx + 79.0, ly + 0.9), arrowstyle="-|>",
         mutation_scale=11, lw=1.2, linestyle=(0, (4, 2.5)), color=REF_EDGE))
-    ax.text(lx + 97.5, ly + 0.9, "reference / config feed", ha="left", va="center",
-            fontsize=8.8, color="#24303C")
+    lt = ax.text(lx + 80.0, ly + 0.9, "ref / config feed", ha="left",
+                 va="center", fontsize=8.0, color="#24303C")
+    _gate(lt, canvas_box, "legend label 'ref / config feed'")
+
+    # ---- self-gate, then write -------------------------------------------------
+    run_gate(fig, ax)
 
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                        "F_pipeline_overview.png")

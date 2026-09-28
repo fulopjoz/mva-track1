@@ -220,15 +220,19 @@ Changing the HPO weight from **2.0** to **0** lowers the BUB1B pair's rank to **
 ## 6. Output Contract
 
 ### 6.1 Ranked TSV (`annot_full.tsv`)
-- **Location:** `<write_dir>/annot_ns.tsv` (default `~/hf-rare/pipeline/output/annot_ns.tsv`).
-- **Columns (16):**
-  1. `rank` (1-based)
-  2. `type` (`compound_het` or `hom_alt`)
-  3. `gene`
-  4-10. `chrom_1`, `pos_1`, `ref_1`, `alt_1`, `chrom_2`, `pos_2`, `alt_2`
-  11. `epcr` (four-decimal float, clamped to (0, 1])
-  12-13. `consequence_1`, `consequence_2`
-  14-15. `cadd_1`, `cadd_2` (may be empty)
+- **Location:** `output/annot_full.tsv`, as written by every documented invocation (which passes `--out output/annot_full.tsv`); `annot_ns.tsv` under `output.write_dir` is only the argparse default used when `--out` is omitted (`prioritize.py` line 85).
+- **Columns (16), in file order (`prioritize.py` lines 197-198):**
+
+| # | Column | Notes |
+|---|---|---|
+| 1 | `rank` | 1-based |
+| 2 | `type` | `compound_het` or `hom_alt` |
+| 3 | `gene` | |
+| 4-11 | `chrom_1`, `pos_1`, `ref_1`, `alt_1`, `chrom_2`, `pos_2`, `ref_2`, `alt_2` | first and second allele coordinates, bare contig names |
+| 12 | `epcr` | four-decimal float, clamped to (0, 1] |
+| 13-14 | `consequence_1`, `consequence_2` | |
+| 15-16 | `cadd_1`, `cadd_2` | may be empty |
+
 - **Generation:** performed by `prioritize.py::main()` (writes a header line then rows).
 - **Observed size:** 8,666 rows (see *REPORT.md* line 8).
 
@@ -269,6 +273,12 @@ python3 pipeline/scripts/make_submission_csv.py \
 - The top-ranked EPCR is **0.5823** (BUB1B pair).
 
 The pipeline is deterministic: no random numbers, no date-dependent file names, and all sorting uses Python's stable `list.sort`.
+
+This documentation itself is rebuilt by `docs/build_pdf.sh` (pandoc with the XeLaTeX engine and the DejaVu Serif main font - pdflatex cannot encode non-ASCII glyphs):
+
+```bash
+./docs/build_pdf.sh    # -> TRACK1_TECHNICAL_DOCUMENTATION.pdf
+```
 
 ---
 
