@@ -54,8 +54,13 @@ class Transcript:
 
     def cds_spliced(self, genome_fetch):
         """Spliced CDS sequence in translation order."""
-        parts = self.cds if self.strand == '+' else list(reversed(self.cds))
-        seq = ''.join(genome_fetch(s, e) for s, e in parts)
+        # Regression note (fix/minus-strand-cds-assembly): concat in ascending
+        # segment order for BOTH strands and revcomp once for minus. Reversing
+        # the segment list first cancelled the trailing revcomp at segment
+        # level, yielding revcomp(P1)+revcomp(P2)+... in ascending segment
+        # order; every codon lookup in multi-exon minus-strand transcripts was
+        # then misaligned (hgvsp='codon-mismatch(ref=genome)' -> missense).
+        seq = ''.join(genome_fetch(s, e) for s, e in self.cds)
         if self.strand == '-':
             seq = seq.translate(COMP)[::-1]
         return seq
