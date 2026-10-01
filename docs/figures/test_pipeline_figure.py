@@ -89,3 +89,75 @@ def test_every_dot_label_uses_only_allowlisted_tokens():
 def test_lane_check_files_exist():
     for check in pf.LANE:
         assert (REPO / check).is_file(), check
+
+
+# ---- Task 2: rendering ---------------------------------------------------------------------
+import subprocess  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
+import yaml  # noqa: E402
+
+SIZE_ATTR = re.compile(r'size="[^"]*",\s*')
+
+
+def _render(tmp_path, fmt, cfg=CFG, name="fig"):
+    return pf.render(pf.build_dot(cfg), tmp_path / f"{name}.{fmt}", fmt)
+
+
+def _pdf_width_pt(pdf):
+    info = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True, check=True).stdout
+    return float(re.search(r"Page size:\s+([\d.]+) x", info).group(1))
+
+
+def test_svg_parses_and_has_no_raster(tmp_path):
+    root = ET.parse(_render(tmp_path, "svg")).getroot()
+    assert not [e for e in root.iter() if e.tag.endswith("image")]
+
+
+def test_pdf_is_vector_with_embedded_non_type3_fonts(tmp_path):
+    pdf = _render(tmp_path, "pdf")
+    imgs = subprocess.run(["pdfimages", "-list", str(pdf)], capture_output=True, text=True, check=True)
+    assert len(imgs.stdout.strip().splitlines()) <= 2  # header lines only
+    fonts = subprocess.run(["pdffonts", str(pdf)], capture_output=True, text=True, check=True).stdout
+    assert "Type 3" not in fonts and "DejaVu" in fonts
+
+
+def test_width_and_effective_font_budget(tmp_path):
+    capped = _pdf_width_pt(_render(tmp_path, "pdf"))
+    natural_dot = SIZE_ATTR.sub("", pf.build_dot(CFG), count=1)
+    assert not re.search(r"\bsize=", natural_dot)
+    natural = _pdf_width_pt(pf.render(natural_dot, tmp_path / "nat.pdf", "pdf"))
+    assert capped <= 470
+    scale = capped / natural if natural > capped else 1.0
+    assert 10 * scale >= 7, (capped, natural)  # smallest font in the figure is 10 pt
+
+
+def test_svg_render_is_deterministic(tmp_path):
+    a = _render(tmp_path, "svg").read_bytes()
+    b = _render(tmp_path, "svg", name="again").read_bytes()
+    assert a == b
+
+
+def _cfgfile(tmp_path, cfg):
+    p = tmp_path / "cfg.yml"
+    p.write_text(yaml.safe_dump(cfg))
+    return str(p)
+
+
+def test_check_passes_on_fresh_and_fails_on_drift(tmp_path):
+    svg = tmp_path / f"{pf.NAME}.svg"
+    pf.render(pf.build_dot(CFG), svg, "svg")
+    assert pf.main(["--check", "--config", _cfgfile(tmp_path, CFG), "--svg", str(svg)]) == 0
+    drift = copy.deepcopy(CFG)
+    drift["scoring"]["hpo_weight"] = 3.0
+    assert pf.main(["--check", "--config", _cfgfile(tmp_path, drift), "--svg", str(svg)]) == 1
+
+
+def test_check_fails_when_svg_missing(tmp_path):
+    missing = str(tmp_path / "nope.svg")
+    assert pf.main(["--check", "--config", _cfgfile(tmp_path, CFG), "--svg", missing]) == 1
+
+
+def test_out_writes_svg_and_pdf(tmp_path):
+    assert pf.main(["--out", str(tmp_path), "--config", _cfgfile(tmp_path, CFG)]) == 0
+    assert (tmp_path / f"{pf.NAME}.svg").is_file() and (tmp_path / f"{pf.NAME}.pdf").is_file()
