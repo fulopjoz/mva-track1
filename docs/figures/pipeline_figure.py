@@ -15,6 +15,7 @@ Usage:
 """
 
 import argparse
+import itertools
 import re
 import subprocess
 import sys
@@ -67,14 +68,72 @@ LANE_TEXT = {
 }
 
 VOCAB = frozenset(
-    """
-    Inputs Proband VCF GRCh38 HPO phenotype terms References GENCODE v47 MANE gnomAD v4.1 exomes
-    CADD v1.7 ClinVar QC filter GQ DP alt fraction Annotation consequence on transcripts
-    strand-aware CDS assembly when available Rarity population AF rare ultra-rare Inheritance
-    compound-heterozygous pairs same gene homozygous candidates Scoring weights phenotype
-    pathogenicity rarity founder Output ranked submission CSV rows Verification checks
-    chk_cds_minus_strand.py check_submission_schema.py tests minus-strand codon regression schema
-    """.split()
+    [
+        "Inputs",
+        "Proband",
+        "VCF",
+        "GRCh38",
+        "HPO",
+        "phenotype",
+        "terms",
+        "References",
+        "GENCODE",
+        "v47",
+        "MANE",
+        "gnomAD",
+        "v4.1",
+        "exomes",
+        "CADD",
+        "v1.7",
+        "ClinVar",
+        "QC",
+        "filter",
+        "GQ",
+        "DP",
+        "alt",
+        "fraction",
+        "Annotation",
+        "consequence",
+        "on",
+        "transcripts",
+        "strand-aware",
+        "CDS",
+        "assembly",
+        "when",
+        "available",
+        "Rarity",
+        "population",
+        "AF",
+        "rare",
+        "ultra-rare",
+        "Inheritance",
+        "compound-heterozygous",
+        "pairs",
+        "same",
+        "gene",
+        "homozygous",
+        "candidates",
+        "Scoring",
+        "weights",
+        "phenotype",
+        "pathogenicity",
+        "rarity",
+        "founder",
+        "Output",
+        "ranked",
+        "submission",
+        "CSV",
+        "rows",
+        "Verification",
+        "checks",
+        "chk_cds_minus_strand.py",
+        "check_submission_schema.py",
+        "tests",
+        "minus-strand",
+        "codon",
+        "regression",
+        "schema",
+    ]
 )
 FIXED_NUMBERS = frozenset({"10"})
 
@@ -123,23 +182,29 @@ def build_dot(config):
     order = list(STAGE_ROLE)
     out = [
         "digraph pipeline {",
-        '  graph [rankdir=TB, size="5.4,20", pad=0, nodesep=0.3, ranksep=0.28,'
-        ' fontname="DejaVu Sans", fontsize=11];',
-        '  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,'
-        ' margin="0.14,0.06", penwidth=1.3];',
+        (
+            '  graph [rankdir=TB, size="5.4,20", pad=0, nodesep=0.3, ranksep=0.28,'
+            ' fontname="DejaVu Sans", fontsize=11];'
+        ),
+        (
+            '  node [shape=box, style="rounded,filled", fontname="DejaVu Sans", fontsize=11,'
+            ' margin="0.14,0.06", penwidth=1.3];'
+        ),
         '  edge [color="#555555", penwidth=1.1, arrowsize=0.7];',
     ]
     for node, role in STAGE_ROLE.items():
         fill, border = ROLE[role]
         out.append(f'  {node} [label={_q(lab[node])}, fillcolor="{fill}", color="{border}"];')
-    out += [f"  {a} -> {b};" for a, b in zip(order, order[1:])]
+    out += [f"  {a} -> {b};" for a, b in itertools.pairwise(order)]
     fill, border = ROLE["verify"]
     out.append(
         f'  subgraph cluster_verify {{ label="Verification checks"; style="dashed,rounded";'
         f' color="{border}"; fontcolor="{border}"; fontsize=10;'
     )
     for i, check in enumerate(LANE):
-        out.append(f'    check{i} [label={_q(LANE_TEXT[check])}, fontsize=10, fillcolor="{fill}", color="{border}"];')
+        out.append(
+            f'    check{i} [label={_q(LANE_TEXT[check])}, fontsize=10, fillcolor="{fill}", color="{border}"];'
+        )
     out.append("  }")
     for i, target in enumerate(LANE.values()):
         anchor = order[order.index(target) - 1]  # level the check with the stage it guards
@@ -156,8 +221,14 @@ def render(dot, out, fmt):
     return out
 
 
-FENCE = re.compile(r"^(```|~~~).*?^\1[^\n]*$", re.M | re.S)
-IMAGE_REF = re.compile(r"!\[[^\]]*\]\([^)]*F_pipeline_overview[^)]*\)")
+FENCE = re.compile(r"^(```|~~~).*?^\1[^\n]*$", re.MULTILINE | re.DOTALL)
+IMAGE_REF = re.compile(r"!\[[^\]]*\]\([^)]*F_pipeline_overview_v2\.pdf[^)]*\)")
+XML_COMMENT = re.compile(rb"<!--.*?-->", re.DOTALL)
+
+
+def _canonical(svg_bytes):
+    """SVG bytes without XML comments (Graphviz writes its version and the graph title there)."""
+    return XML_COMMENT.sub(b"", svg_bytes)
 
 
 def count_refs(md_text):
@@ -186,7 +257,7 @@ def main(argv):
             print("figure check: committed SVG missing", file=sys.stderr)
             return 1
         fresh = render(dot, svg.with_name(svg.stem + ".check.svg"), "svg")
-        same = fresh.read_bytes() == svg.read_bytes()
+        same = _canonical(fresh.read_bytes()) == _canonical(svg.read_bytes())
         fresh.unlink()
         print("figure check: " + ("ok" if same else "DRIFT (re-render and commit)"), file=sys.stderr)
         return 0 if same else 1
