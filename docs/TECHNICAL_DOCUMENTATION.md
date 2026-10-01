@@ -350,7 +350,7 @@ This documentation itself is rebuilt by `docs/build_pdf.sh` (pandoc with the XeL
 
 ## 9. Appendix - Figure 1
 
-![Pipeline overview diagram](figures/F_pipeline_overview.png)
+![Pipeline overview: stages top to bottom; dashed lane = in-repo checks guarding the annotation and output steps.](F_pipeline_overview_v2.pdf){width=100%}
 
 *Figure 1: Flowchart of the Track 1 variant-prioritization pipeline. Blue boxes denote pipeline stages, orange boxes local reference inputs, and the green box the configuration file. Solid arrows indicate data flow; dashed arrows show configuration/reference feeding.*
 
