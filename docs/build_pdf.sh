@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# Rebuild TRACK1_TECHNICAL_DOCUMENTATION.pdf (run from repo root).
+# Rebuild TRACK1_TECHNICAL_DOCUMENTATION.pdf (may be run from any directory; not via a symlink).
 set -euo pipefail
+here=${BASH_SOURCE[0]%/*}; [ "$here" = "${BASH_SOURCE[0]}" ] && here=.
+cd "$here/.."   # run from the repo root wherever the script is invoked (builtins only)
 
 # Pipeline figure v2 (docs/figures/pipeline_figure.py): tools, freshness of the committed
 # SVG, exactly one figure reference in the document, then render the PDF pandoc embeds.
 command -v dot >/dev/null || { echo "build_pdf.sh: graphviz 'dot' not found" >&2; exit 1; }
+for tool in pandoc xelatex pdftotext; do
+  command -v "$tool" >/dev/null || { echo "build_pdf.sh: $tool not found" >&2; exit 1; }
+done
 fc-match "DejaVu Sans" | grep -q DejaVuSans || { echo "build_pdf.sh: DejaVu Sans font missing" >&2; exit 1; }
 python3 docs/figures/pipeline_figure.py --check
 python3 docs/figures/pipeline_figure.py --count-refs docs/TECHNICAL_DOCUMENTATION.md --expect 1 >/dev/null \

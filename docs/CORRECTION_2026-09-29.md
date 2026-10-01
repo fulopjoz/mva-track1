@@ -9,20 +9,25 @@ came out reverse-complemented but placed in ascending genomic order instead of
 translation order. Variant positions were indexed in translation order, so for
 variants in multi-exon minus-strand transcripts the annotator read codons from
 the wrong bases. Any coding variant in such transcripts could be affected, not
-only loss-of-function ones (in our test, 5 of 6 were; one matched by
-coincidence): a variant was either given a wrong consequence (for example a
+only loss-of-function ones (in our test, 5 of 6 were affected; for the sixth
+the misread codon happened to give the same change): a variant was either given a wrong consequence (for example a
 stop-gain labelled `missense_variant`) or rejected as a codon mismatch and
 dropped without a trace. Compound-heterozygous pairs that need a
 loss-of-function variant could therefore not form in these genes. Plus-strand
 transcripts and minus-strand transcripts with a single CDS segment were not
-affected.
+affected (with one segment the two operations reduce to a single, correct
+reverse-complement).
 
 ## How it was found
 A synthetic known-answer test (public GRCh38 chromosome 2 sequence, GENCODE v47
 MANE annotation, 10 designed variants whose effects were verified independently
 at codon level) expected 2 compound-heterozygous pairs; the pipeline called 0.
 Rebuilding the faulty sequence model reproduced the annotator's output on all 6
-minus-strand test variants exactly, which confirmed the mechanism.
+minus-strand test variants exactly, and an independent full-CDS translation of
+each test gene agreed with the designed effects. This is consistent with the
+mechanism on the variants that detected it; no held-out validation set was
+used. The acceptance test is kept in the authors' workspace outside this
+repository and is available on request.
 
 ## Fix and affected versions
 Fixed in [PR #2](https://github.com/fulopjoz/mva-track1/pull/2) (merge commit
@@ -32,12 +37,13 @@ ascending genomic order and the joined string is reverse-complemented once
 in translation order). Regression check: `checks/chk_cds_minus_strand.py`.
 Affected versions: from commit `5b7eed9` (where `annotate.py` and `cds_spliced`
 were added) up to `bbc00f2`
-(the first parent of `42acf36`, i.e. the last `main` commit before the fix).
+(the first parent of `42acf36`, i.e. the last `main` commit before the fix);
+no commit in that range changed lines naming `cds_spliced`.
 A schema checker for the submission file was added in
 [PR #1](https://github.com/fulopjoz/mva-track1/pull/1).
 
 ## Influence on results
-Numbers below were confirmed by the authors; items still pending are marked as such.
+Values below come from the authors' records; items still pending are marked as such.
 
 | Quantity | Before fix | After fix | Where the earlier value appeared | Source |
 |---|---|---|---|---|
@@ -45,15 +51,19 @@ Numbers below were confirmed by the authors; items still pending are marked as s
 | Submitted rows changed / total | — | pending: corrected submission not yet regenerated | submission CSV | corrected submission |
 | Minus-strand coding variants reclassified / dropped / newly paired | — | not quantified: no aggregate count was computed in the re-run | — | re-run |
 
-The corrected submission passes `checks/check_submission_schema.py`, the
-regression check passes, and the re-run is deterministic (pending: to be run on
-the regenerated submission).
+The regression check passes on `main`. The schema check and a determinism check
+of the corrected submission are pending its regeneration. The rank of the true
+pair is a single observation: because reclassified and dropped variants were not
+counted, the extent of the bug's effect on this case's other candidates is
+unknown.
 
 ### Separate correction: phenotype-term ablation
 Independently of the annotator bug, an earlier "rank without the phenotype term"
 value is withdrawn: it came from a scorer stub that repeated the
 with-phenotype rank instead of re-ranking. The ablation was re-measured with a
-fixed scorer.
+fixed scorer. The report (last revised 2026-09-18) contains one statement about
+the phenotype weight that predates this re-measurement; it is pending review
+by the authors.
 
 | Quantity | Withdrawn value | Re-measured | Where the withdrawn value appeared |
 |---|---|---|---|
@@ -70,11 +80,11 @@ evidence of general robustness.
 ## Summary (for the report and methods form)
 A bug in the annotator's coding-sequence assembly for multi-exon minus-strand
 transcripts could give coding variants in those genes wrong consequences or
-drop them as codon mismatches, so loss-of-function variants there were missed. It
+drop them as codon mismatches, so loss-of-function variants there could be missed. It
 was found with a synthetic known-answer test and fixed in PR #2 (commit
 42acf36), with a regression check. After re-annotation the true causal pair's
-rank is unchanged at 1; the submission is being regenerated and checked
-against the new schema checker. Separately, an earlier phenotype-ablation value from a
+rank is unchanged at 1, although the bug's effect on other candidates was not
+measured; the submission is being regenerated and checked. Separately, an earlier phenotype-ablation value from a
 scorer stub is withdrawn and replaced by a re-measurement (rank 21 without
 the phenotype term, 1 with it). This is a single case; the numbers are
 sensitivity observations.
