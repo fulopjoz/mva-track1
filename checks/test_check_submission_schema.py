@@ -132,3 +132,34 @@ def test_error_messages_never_echo_cell_values(tmp_path):
     )
     assert res.returncode == 1
     assert secret not in res.stdout + res.stderr
+
+
+# ---- audit fixes (2026-10-01) ------------------------------------------------------------------
+def test_utf8_bom_and_non_ascii_notes_are_accepted(tmp_path):
+    rows = [list(PAIR[:-1]) + ["notes with ü and ≥"]]
+    p = write(tmp_path, rows)
+    p.write_bytes(b"\xef\xbb\xbf" + p.read_bytes())
+    assert validate(p) == []
+
+
+def test_header_error_names_first_mismatching_column(tmp_path):
+    hdr = list(HEADER)
+    hdr[3] = "ref"
+    errs = validate(write(tmp_path, [PAIR], header=hdr))
+    assert any("column 4" in e and "ref_1" in e for e in errs), errs
+
+
+@pytest.mark.parametrize("value", ["1_0e-1", " 0.5 ", "0.5 ", "+0.5", "5e-1"])
+def test_epcr_must_be_a_plain_decimal(tmp_path, value):
+    assert any("epcr" in e for e in validate(write(tmp_path, [with_field(PAIR, "epcr", value)])))
+
+
+def test_filename_convention_is_a_warning_not_an_error(tmp_path):
+    bad = write(tmp_path, [PAIR, SINGLE])
+    res = subprocess.run([sys.executable, SCRIPT, bad], capture_output=True, text=True, check=False)
+    assert res.returncode == 0
+    assert "WARNING" in res.stdout and "filename" in res.stdout
+    good = bad.with_name("jane-doe_gatk-haplotype.csv")
+    bad.rename(good)
+    res = subprocess.run([sys.executable, SCRIPT, good], capture_output=True, text=True, check=False)
+    assert res.returncode == 0 and "WARNING" not in res.stdout
