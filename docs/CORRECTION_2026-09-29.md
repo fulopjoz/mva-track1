@@ -8,9 +8,12 @@ string. The two reversals undo each other at segment level, so each segment
 came out reverse-complemented but placed in ascending genomic order instead of
 translation order. Variant positions were indexed in translation order, so for
 variants in multi-exon minus-strand transcripts the annotator read codons from
-the wrong bases. Loss-of-function changes in such genes could be labelled
-`missense_variant` or rejected as a codon mismatch, so compound-heterozygous
-pairs that need a loss-of-function variant could not form there. Plus-strand
+the wrong bases. Any coding variant in such transcripts could be affected, not
+only loss-of-function ones (in our test, 5 of 6 were; one matched by
+coincidence): a variant was either given a wrong consequence (for example a
+stop-gain labelled `missense_variant`) or rejected as a codon mismatch and
+dropped without a trace. Compound-heterozygous pairs that need a
+loss-of-function variant could therefore not form in these genes. Plus-strand
 transcripts and minus-strand transcripts with a single CDS segment were not
 affected.
 
@@ -27,19 +30,32 @@ Fixed in [PR #2](https://github.com/fulopjoz/mva-track1/pull/2) (merge commit
 ascending genomic order and the joined string is reverse-complemented once
 (equivalently, each segment is reverse-complemented and the segments are joined
 in translation order). Regression check: `checks/chk_cds_minus_strand.py`.
-Affected versions: from commit `HUMAN: introducing commit` up to the parent of
-`42acf36`. A schema checker for the submission file was added in
+Affected versions: from commit `HUMAN: introducing commit` up to `bbc00f2`
+(the first parent of `42acf36`, i.e. the last `main` commit before the fix).
+A schema checker for the submission file was added in
 [PR #1](https://github.com/fulopjoz/mva-track1/pull/1).
 
 ## Influence on results
 Every number below was confirmed by the authors before this note was published.
 
-| Quantity | Before fix | After fix | Source |
+| Quantity | Before fix | After fix | Where the earlier value appeared | Source |
+|---|---|---|---|---|
+| Rank of the true causal pair | HUMAN | HUMAN | HUMAN | clinical re-run |
+| Submitted rows changed / total | — | HUMAN | submission CSV | corrected submission |
+| Minus-strand coding variants reclassified / dropped / newly paired | — | HUMAN or "not quantified: reason" | — | re-run |
+
+The corrected submission passes `checks/check_submission_schema.py`, the
+regression check passes, and the re-run is deterministic (HUMAN: confirm).
+
+### Separate correction: phenotype-term ablation
+Independently of the annotator bug, an earlier "rank without the phenotype term"
+value is withdrawn: it came from a scorer stub that repeated the
+with-phenotype rank instead of re-ranking. The ablation was re-measured with a
+fixed scorer.
+
+| Quantity | Withdrawn value | Re-measured | Where the withdrawn value appeared |
 |---|---|---|---|
-| Rank of the true causal pair | HUMAN | HUMAN | clinical re-run |
-| Submitted rows changed / total | — | HUMAN | corrected submission |
-| Minus-strand transcripts reclassified (aggregate) | — | HUMAN or "not quantified: reason" | re-run |
-| Rank of the true pair without the phenotype term | HUMAN: withdrawn value and where it appeared | HUMAN | fixed scorer |
+| Rank of the true pair without the phenotype term | HUMAN | HUMAN | HUMAN |
 
 This is a single case (n = 1); these numbers are sensitivity observations, not
 evidence of general robustness.
@@ -51,9 +67,12 @@ evidence of general robustness.
 
 ## Summary (for the report and methods form)
 A bug in the annotator's coding-sequence assembly for multi-exon minus-strand
-transcripts could mislabel loss-of-function variants in those genes. It was
-found with a synthetic known-answer test and fixed in PR #2 (commit 42acf36),
-with a regression check. After re-annotation the true causal pair's rank is
-HUMAN; HUMAN submitted row(s) changed and the submission was corrected. The
-phenotype-term ablation was re-measured (rank HUMAN without, HUMAN with). This
-is a single case; the numbers are sensitivity observations.
+transcripts could give coding variants in those genes wrong consequences or
+drop them as codon mismatches, so loss-of-function variants there were missed. It
+was found with a synthetic known-answer test and fixed in PR #2 (commit
+42acf36), with a regression check. After re-annotation the true causal pair's
+rank is HUMAN; HUMAN submitted row(s) changed and the corrected submission
+passes the schema check. Separately, an earlier phenotype-ablation value from a
+scorer stub is withdrawn and replaced by a re-measurement (rank HUMAN without
+the phenotype term, HUMAN with it). This is a single case; the numbers are
+sensitivity observations.
