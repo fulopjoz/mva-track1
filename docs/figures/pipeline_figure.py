@@ -19,6 +19,7 @@ import itertools
 import re
 import subprocess
 import sys
+from decimal import Decimal
 from pathlib import Path
 
 import yaml
@@ -148,15 +149,23 @@ def get_value(config, path):
 
 
 def fmt(v):
-    v = float(v)
+    """Plain decimal text for a config number (YAML may give int, float or str)."""
+    if isinstance(v, bool):
+        raise TypeError("boolean is not a number")
+    v = float(v)  # ValueError for non-numeric strings
     if v.is_integer():
         return str(int(v))
-    return f"{v:.12f}".rstrip("0")
+    return format(Decimal(repr(v)), "f")
 
 
 def labels(config):
     """Stage node id -> label text (config values substituted)."""
-    v = {k: fmt(get_value(config, k)) for k in KEYS}
+    v = {}
+    for k in KEYS:
+        try:
+            v[k] = fmt(get_value(config, k))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"config key {k}: not a number ({exc})") from None
     return {
         "inputs": "Inputs\nProband VCF (GRCh38)\nHPO phenotype terms\n"
         "References: GENCODE v47 MANE\ngnomAD v4.1 exomes · CADD v1.7\nClinVar · HPO",
@@ -207,6 +216,10 @@ def build_dot(config):
         )
     out.append("  }")
     for i, target in enumerate(LANE.values()):
+        if order.index(target) == 0:
+            raise ValueError(
+                f"lane check cannot guard the first stage ({target!r}): nothing to level it with"
+            )
         anchor = order[order.index(target) - 1]  # level the check with the stage it guards
         out.append(f"  {anchor} -> check{i} [style=invis];")
         out.append(f'  check{i} -> {target} [style=dashed, color="{border}", constraint=false];')
@@ -250,6 +263,9 @@ def main(argv):
         n = count_refs(Path(a.count_refs).read_text())
         print(n)
         return 0 if a.expect is None or n == a.expect else 1
+    if not Path(a.config).is_file():
+        print(f"pipeline_figure: config not found: {a.config}", file=sys.stderr)
+        return 1
     dot = build_dot(yaml.safe_load(Path(a.config).read_text()))
     if a.check:
         svg = Path(a.svg)

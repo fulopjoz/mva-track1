@@ -36,7 +36,9 @@ def test_text_edge_right_overrides_margin():
 
 
 def test_text_edge_supports_cm():
-    assert cl.text_edge_pt("\\usepackage[margin=2.2cm]{geometry}") == pytest.approx(595.28 - 22 * MM, abs=0.01)
+    assert cl.text_edge_pt("\\usepackage[margin=2.2cm]{geometry}") == pytest.approx(
+        595.28 - 22 * MM, abs=0.01
+    )
 
 
 def test_text_edge_without_geometry_is_an_error():
