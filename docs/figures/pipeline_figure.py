@@ -147,3 +147,54 @@ def build_dot(config):
         out.append(f'  check{i} -> {target} [style=dashed, color="{border}", constraint=false];')
     out.append("}")
     return "\n".join(out) + "\n"
+
+
+def render(dot, out, fmt):
+    """Render DOT text with Graphviz to out (fmt: 'svg' or 'pdf')."""
+    out = Path(out)
+    subprocess.run(["dot", f"-T{fmt}", "-o", str(out)], input=dot.encode(), check=True)
+    return out
+
+
+FENCE = re.compile(r"^(```|~~~).*?^\1[^\n]*$", re.M | re.S)
+IMAGE_REF = re.compile(r"!\[[^\]]*\]\([^)]*F_pipeline_overview[^)]*\)")
+
+
+def count_refs(md_text):
+    """Number of Markdown image references to the pipeline figure, outside fenced code."""
+    return len(IMAGE_REF.findall(FENCE.sub("", md_text)))
+
+
+def main(argv):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--config", default=str(CONFIG))
+    ap.add_argument("--svg", default=str(HERE / f"{NAME}.svg"))
+    ap.add_argument("--expect", type=int)
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--out")
+    g.add_argument("--check", action="store_true")
+    g.add_argument("--count-refs")
+    a = ap.parse_args(argv)
+    if a.count_refs:
+        n = count_refs(Path(a.count_refs).read_text())
+        print(n)
+        return 0 if a.expect is None or n == a.expect else 1
+    dot = build_dot(yaml.safe_load(Path(a.config).read_text()))
+    if a.check:
+        svg = Path(a.svg)
+        if not svg.is_file():
+            print("figure check: committed SVG missing", file=sys.stderr)
+            return 1
+        fresh = render(dot, svg.with_name(svg.stem + ".check.svg"), "svg")
+        same = fresh.read_bytes() == svg.read_bytes()
+        fresh.unlink()
+        print("figure check: " + ("ok" if same else "DRIFT (re-render and commit)"), file=sys.stderr)
+        return 0 if same else 1
+    out = Path(a.out)
+    render(dot, out / f"{NAME}.svg", "svg")
+    render(dot, out / f"{NAME}.pdf", "pdf")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
