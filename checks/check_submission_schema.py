@@ -11,8 +11,10 @@ check can run on the real submission without echoing its contents.
 Schema (public "Submit - Track 1" tab): 12 exact fields; up to 10 rows; GRCh38
 coordinates on `chrN` contigs; second-variant fields for compound-het pairs
 only, blank otherwise; epcr in (0, 1]; finding_type primary|secondary.
-Additional house rules: one proband_id, no duplicate rows, rows ordered by
-non-increasing epcr (the file's order matches its ranking).
+Additional house rules: one proband_id, no duplicate rows, epcr as a plain
+decimal, rows ordered by
+non-increasing epcr (the file's order matches its ranking). A filename that
+does not follow the challenge convention prints a WARNING (exit code unchanged).
 """
 
 import csv
@@ -41,6 +43,9 @@ CHROM = re.compile(r"^chr([1-9]|1[0-9]|2[0-2]|X|Y|M)$")
 ALLELE = re.compile(r"^[ACGTN]+$")
 POS = re.compile(r"^[1-9][0-9]*$")
 FINDING_TYPES = {"primary", "secondary"}
+EPCR = re.compile(r"^(?:[01](?:\.\d+)?|\.\d+)$")  # plain decimal, no sign/exponent/spaces
+# public rule: "username/team name + short model/approach description", e.g. jane-doe_gatk-haplotype.csv
+FILENAME = re.compile(r"^[A-Za-z0-9-]+_[A-Za-z0-9._-]+\.csv$")
 DEFAULT_CSV = Path(__file__).resolve().parents[1] / "submission_track1.csv"
 
 
@@ -61,10 +66,16 @@ def _variant_errors(row, n, k):
 
 def validate(path):
     """Return a list of problems (empty = valid). Messages never contain cell values."""
-    with open(path, newline="") as fh:
+    with open(path, newline="", encoding="utf-8-sig") as fh:
         records = list(csv.reader(fh))
-    if not records or records[0] != HEADER:
-        return ["header: not the 12 exact schema fields in order"]
+    if not records:
+        return ["header: file is empty"]
+    if records[0] != HEADER:
+        got = records[0]
+        for i, want in enumerate(HEADER):
+            if i >= len(got) or got[i] != want:
+                return [f"header: column {i + 1} should be '{want}' (12 exact schema fields in order)"]
+        return [f"header: {len(got)} columns (must be exactly {len(HEADER)})"]
     body = records[1:]
     errs = []
     if not 1 <= len(body) <= MAX_ROWS:
@@ -84,11 +95,9 @@ def validate(path):
             errs += _variant_errors(row, n, 2)
         elif any(second):
             errs.append(f"row {n}: second variant: partially filled (all four fields or none)")
-        try:
-            e = float(row["epcr"])
-            ok = math.isfinite(e) and 0 < e <= 1
-        except ValueError:
-            e, ok = None, False
+        ok = bool(EPCR.match(row["epcr"]))
+        e = float(row["epcr"]) if ok else None
+        ok = ok and math.isfinite(e) and 0 < e <= 1
         if ok:
             epcrs.append((n, e))
         else:
@@ -115,6 +124,10 @@ def main(argv):
         print("input: file not found")
         return 1
     errs = validate(path)
+    if not FILENAME.match(path.name):
+        print("WARNING: filename does not follow the challenge convention "
+              "'<username-or-team>_<model-or-approach>.csv' (e.g. jane-doe_gatk-haplotype.csv); "
+              "rename before upload")
     for e in errs:
         print(e)
     if errs:
