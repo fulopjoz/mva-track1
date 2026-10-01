@@ -161,3 +161,55 @@ def test_check_fails_when_svg_missing(tmp_path):
 def test_out_writes_svg_and_pdf(tmp_path):
     assert pf.main(["--out", str(tmp_path), "--config", _cfgfile(tmp_path, CFG)]) == 0
     assert (tmp_path / f"{pf.NAME}.svg").is_file() and (tmp_path / f"{pf.NAME}.pdf").is_file()
+
+
+# ---- Task 3: build integration ----------------------------------------------------------------
+import os  # noqa: E402
+import shutil  # noqa: E402
+
+FENCE = "`" * 3
+REF = "![Pipeline overview.](F_pipeline_overview_v2.pdf){width=100%}"
+BUILD = REPO / "docs/build_pdf.sh"
+
+
+def test_count_refs_image_lines_mid_line_and_wrapped_caption():
+    md = f"{REF}\nSee text ![inline](F_pipeline_overview_v2.pdf) here.\n![Wrapped\ncaption](F_pipeline_overview_v2.pdf)\n"
+    assert pf.count_refs(md) == 3
+
+
+def test_count_refs_skips_code_blocks_and_plain_mentions():
+    md = f"{FENCE}\n{REF}\n{FENCE}\nplain mention of F_pipeline_overview_v2.pdf\n"
+    assert pf.count_refs(md) == 0
+
+
+@pytest.mark.parametrize("n,rc", [(0, 1), (1, 0), (2, 1)])
+def test_count_refs_expect_gate(tmp_path, n, rc):
+    md = tmp_path / "doc.md"
+    md.write_text("intro\n" + "\n".join([REF] * n) + "\n")
+    assert pf.main(["--count-refs", str(md), "--expect", "1"]) == rc
+
+
+def test_build_script_wires_the_figure_gate():
+    s = BUILD.read_text()
+    assert "command -v dot" in s and "fc-match" in s
+    assert "pipeline_figure.py --check" in s
+    assert "--count-refs docs/TECHNICAL_DOCUMENTATION.md --expect 1" in s
+    assert "pipeline_figure.py --out docs/figures" in s
+    assert s.index("pipeline_figure.py --out") < s.index("\npandoc ")
+
+
+def test_build_requires_dot(tmp_path):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    for tool in ("fc-match", "grep", "python3", "pandoc"):
+        found = shutil.which(tool)
+        if found:
+            os.symlink(found, bindir / tool)
+    env = {"PATH": str(bindir), "HOME": str(tmp_path)}
+    res = subprocess.run(["/bin/bash", str(BUILD)], cwd=REPO, env=env, capture_output=True, text=True)
+    assert res.returncode != 0
+    assert "graphviz 'dot' not found" in res.stderr
+
+
+def test_rendered_pdf_is_gitignored():
+    assert "docs/figures/F_pipeline_overview_v2.pdf" in (REPO / ".gitignore").read_text().splitlines()
