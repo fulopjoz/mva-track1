@@ -44,7 +44,7 @@ def text_edge_pt(style_tex, page_width_pt=A4_WIDTH_PT):
 
 
 def _pages(bbox_xml):
-    return re.findall(r"<page[^>]*>(.*?)</page>", bbox_xml, re.S)
+    return re.findall(r"<page[^>]*>(.*?)</page>", bbox_xml, re.DOTALL)
 
 
 def parse_ok(bbox_xml, min_pages, min_words):
@@ -72,16 +72,22 @@ def main(argv):
         print("check_pdf_layout: pdftotext not found (install poppler-utils)", file=sys.stderr)
         return 2
     edge = text_edge_pt(STYLE.read_text())
-    bbox = subprocess.run(["pdftotext", "-bbox", a.pdf, "-"], capture_output=True, text=True, check=True).stdout
+    bbox = subprocess.run(
+        ["pdftotext", "-bbox", a.pdf, "-"], capture_output=True, text=True, check=True
+    ).stdout
     if not parse_ok(bbox, a.min_pages, a.min_words):
-        print(f"check_pdf_layout: suspicious parse of {a.pdf} (below --min-pages/--min-words)", file=sys.stderr)
+        print(
+            f"check_pdf_layout: suspicious parse of {a.pdf} (below --min-pages/--min-words)", file=sys.stderr
+        )
         return 1
     viol = violations(bbox, edge, TOLERANCE_PT)
     if viol:
         print(f"LAYOUT GATE FAILED (text edge {edge:.1f}pt + {TOLERANCE_PT}pt):")
         print("\n".join(viol))
         return 1
-    print(f"LAYOUT GATE OK: none beyond {edge + TOLERANCE_PT:.1f}pt (text edge {edge:.1f}pt + {TOLERANCE_PT}pt)")
+    print(
+        f"LAYOUT GATE OK: none beyond {edge + TOLERANCE_PT:.1f}pt (text edge {edge:.1f}pt + {TOLERANCE_PT}pt)"
+    )
     return 0
 
 

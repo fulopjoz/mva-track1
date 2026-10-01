@@ -125,9 +125,11 @@ def main(argv):
         return 1
     errs = validate(path)
     if not FILENAME.match(path.name):
-        print("WARNING: filename does not follow the challenge convention "
-              "'<username-or-team>_<model-or-approach>.csv' (e.g. jane-doe_gatk-haplotype.csv); "
-              "rename before upload")
+        print(
+            "WARNING: filename does not follow the challenge convention "
+            "'<username-or-team>_<model-or-approach>.csv' (e.g. jane-doe_gatk-haplotype.csv); "
+            "rename before upload"
+        )
     for e in errs:
         print(e)
     if errs:
