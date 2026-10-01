@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rebuild TRACK1_TECHNICAL_DOCUMENTATION.pdf (run from repo root).
+# Rebuild TRACK1_TECHNICAL_DOCUMENTATION.pdf (may be run from any directory; not via a symlink).
 set -euo pipefail
 here=${BASH_SOURCE[0]%/*}; [ "$here" = "${BASH_SOURCE[0]}" ] && here=.
 cd "$here/.."   # run from the repo root wherever the script is invoked (builtins only)

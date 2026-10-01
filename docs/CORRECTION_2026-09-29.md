@@ -80,7 +80,7 @@ evidence of general robustness.
 ## Summary (for the report and methods form)
 A bug in the annotator's coding-sequence assembly for multi-exon minus-strand
 transcripts could give coding variants in those genes wrong consequences or
-drop them as codon mismatches, so loss-of-function variants there were missed. It
+drop them as codon mismatches, so loss-of-function variants there could be missed. It
 was found with a synthetic known-answer test and fixed in PR #2 (commit
 42acf36), with a regression check. After re-annotation the true causal pair's
 rank is unchanged at 1, although the bug's effect on other candidates was not
