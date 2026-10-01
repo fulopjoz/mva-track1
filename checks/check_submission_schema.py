@@ -43,7 +43,7 @@ CHROM = re.compile(r"^chr([1-9]|1[0-9]|2[0-2]|X|Y|M)$")
 ALLELE = re.compile(r"^[ACGTN]+$")
 POS = re.compile(r"^[1-9][0-9]*$")
 FINDING_TYPES = {"primary", "secondary"}
-EPCR = re.compile(r"^(?:[01](?:\.\d+)?|\.\d+)$")  # plain decimal, no sign/exponent/spaces
+EPCR = re.compile(r"(?:[01](?:\.[0-9]+)?|\.[0-9]+)")  # plain ASCII decimal; used with fullmatch
 # public rule: "username/team name + short model/approach description", e.g. jane-doe_gatk-haplotype.csv
 FILENAME = re.compile(r"^[A-Za-z0-9-]+_[A-Za-z0-9._-]+\.csv$")
 DEFAULT_CSV = Path(__file__).resolve().parents[1] / "submission_track1.csv"
@@ -95,7 +95,7 @@ def validate(path):
             errs += _variant_errors(row, n, 2)
         elif any(second):
             errs.append(f"row {n}: second variant: partially filled (all four fields or none)")
-        ok = bool(EPCR.match(row["epcr"]))
+        ok = bool(EPCR.fullmatch(row["epcr"]))
         e = float(row["epcr"]) if ok else None
         ok = ok and math.isfinite(e) and 0 < e <= 1
         if ok:
@@ -124,7 +124,7 @@ def main(argv):
         print("input: file not found")
         return 1
     errs = validate(path)
-    if not FILENAME.match(path.name):
+    if not FILENAME.fullmatch(path.name) or path.name == DEFAULT_CSV.name:
         print(
             "WARNING: filename does not follow the challenge convention "
             "'<username-or-team>_<model-or-approach>.csv' (e.g. jane-doe_gatk-haplotype.csv); "

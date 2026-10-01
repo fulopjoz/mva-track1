@@ -163,3 +163,22 @@ def test_filename_convention_is_a_warning_not_an_error(tmp_path):
     bad.rename(good)
     res = subprocess.run([sys.executable, SCRIPT, good], capture_output=True, text=True, check=False)
     assert res.returncode == 0 and "WARNING" not in res.stdout
+
+
+@pytest.mark.parametrize("value", ["0.5\n", "0.\u0665", "1.", "0x1"])
+def test_epcr_rejects_trailing_newline_unicode_digits_and_bad_forms(tmp_path, value):
+    assert any("epcr" in e for e in validate(write(tmp_path, [with_field(PAIR, "epcr", value)])))
+
+
+def test_epcr_accepts_leading_dot_decimal(tmp_path):
+    assert validate(write(tmp_path, [with_field(PAIR, "epcr", ".5")])) == []
+
+
+def test_repo_default_filename_triggers_the_warning(tmp_path):
+    from check_submission_schema import DEFAULT_CSV
+
+    p = write(tmp_path, [PAIR])
+    default = p.with_name(DEFAULT_CSV.name)
+    p.rename(default)
+    res = subprocess.run([sys.executable, SCRIPT, default], capture_output=True, text=True, check=False)
+    assert res.returncode == 0 and "WARNING" in res.stdout

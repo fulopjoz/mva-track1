@@ -33,10 +33,15 @@ def _length_pt(value):
 
 def text_edge_pt(style_tex, page_width_pt=A4_WIDTH_PT):
     """x position of the right text edge from a \\usepackage[...]{geometry} line."""
+    style_tex = re.sub(r"(?<!\\)%.*", "", style_tex)  # drop LaTeX comments
     m = re.search(r"\\usepackage\[([^\]]*)\]\{geometry\}", style_tex)
     if not m:
         raise ValueError("no \\usepackage[...]{geometry} line in the style file")
-    opts = dict(o.split("=", 1) for o in (p.strip() for p in m.group(1).split(",")) if "=" in o)
+    opts = {}
+    for item in m.group(1).split(","):
+        if "=" in item:
+            key, value = item.split("=", 1)
+            opts[key.strip()] = value.strip()
     right = opts.get("right", opts.get("margin"))
     if right is None:
         raise ValueError("geometry sets neither right= nor margin=")

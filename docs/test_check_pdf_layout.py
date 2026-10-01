@@ -74,3 +74,14 @@ def test_missing_pdftotext_gives_clear_message(tmp_path):
     )
     assert res.returncode == 2
     assert "pdftotext not found" in res.stderr
+
+
+def test_geometry_with_spaces_around_equals():
+    assert cl.text_edge_pt("\\usepackage[a4paper, margin = 17mm]{geometry}") == pytest.approx(
+        595.28 - 17 * MM, abs=0.01
+    )
+
+
+def test_commented_out_geometry_line_is_ignored():
+    tex = "% \\usepackage[margin=40mm]{geometry}\n\\usepackage[margin=17mm]{geometry}"
+    assert cl.text_edge_pt(tex) == pytest.approx(595.28 - 17 * MM, abs=0.01)
