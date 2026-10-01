@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+docs/figures/F_pipeline_overview_v2.pdf
