@@ -86,3 +86,30 @@ reference files.
 Built with AI assistance (Kimi K3 via Oh My Pi); no patient data left the
 analysis hosts and none was sent to any external API, per the challenge
 rules.
+
+## Data availability
+
+Four artefacts cited above and in the technical documentation are **not present in this
+repository, by design**. They are pipeline outputs computed from the patient's sequence data, so
+each one is a per-variant table for a single identifiable individual. Publishing them would
+disclose case data that this project's whole architecture exists to contain, and the repository
+becomes public after the hackathon closes.
+
+| Cited artefact | Why it is absent |
+|---|---|
+| `desensitization.json` | Per-variant ranks for the case under varied phenotype weighting. Patient-derived. |
+| `exomiser_summary.tsv` | Per-variant Exomiser output for the case. Patient-derived. |
+| `output/annot_full.tsv` | The full annotated variant table for the case. Patient-derived. |
+| `annot_ns.tsv` | The nonsynonymous subset of the same table. Patient-derived. |
+
+They were used to produce the numbers reported above and are retained on the whitelisted analysis
+machine. They can be made available to the organisers or to a reviewer under the data agreement
+that governs the source dataset, on request.
+
+`hpo_gene_to_phenotype.tsv` is also referenced and is likewise not shipped, for a different and
+more ordinary reason: it is a public reference file distributed by the Human Phenotype Ontology
+project and is fetched rather than vendored.
+
+**Everything needed to re-run the pipeline is here**: the scripts under `pipeline/`, the
+configuration under `pipeline/conf/`, and the reproduction steps above. What is withheld is the
+output computed from one child's genome, not the method that produced it.
