@@ -5,7 +5,7 @@ Submission file: `submission_track1.csv`.
 
 ## Result
 
-The pipeline ranks the clinically confirmed genotype first of 8,666
+The pipeline ranks the clinically confirmed genotype first of 6,962
 candidates: compound-heterozygous **BUB1B p.Leu737Ter**
 (chr15:40,209,701 T>G, stop gained; ClinVar allele ID 529272) plus
 **BUB1B p.Asn1002Lys** (chr15:40,220,612 T>G, missense), score 0.5823.
@@ -20,9 +20,16 @@ alleles in the same gene does not by itself prove that they are in trans.
 | Rank | Genotype | Score |
 |---|---|---|
 | 1 | BUB1B p.Leu737Ter + p.Asn1002Lys | 0.5823 |
-| 2-7 | RAI1 frameshift-deletion pairs (two orientations) | 0.5243 / 0.4914 |
-| 8-10 | KIF7 pairs (founder allele is a common stop polymorphism, gnomAD frequency 0.561) | 0.4515 |
-| 2,373 and below | homozygous-recessive singles (ordered after biallelic pairs by design) | — |
+| 2 | RAI1 frameshift/frameshift pair | 0.5243 |
+| 3-6 | RAI1 missense/frameshift pairs | 0.4914 |
+| 7-10 | HLA-DRB1 founder pairs | 0.4509 |
+| 2,212 and below | homozygous-recessive singles (ordered after biallelic pairs by design) | — |
+
+Note: the September 17 table showed three KIF7 rows at ranks 8-10; those were
+produced by the minus-strand annotation error corrected on 2026-09-29
+(the "stop" became p.S1016S synonymous), and the September 29 corrected table
+already removed them. The table above is the definitive 2026-10-19 run
+(splice-classification and multiallelic-allele handling audits included).
 
 ## Method
 
@@ -30,11 +37,20 @@ One pass over the 5,012,204-record proband VCF. Each stage's counter is
 measured from the run.
 
 1. **Quality filter.** FILTER is PASS or absent, genotype quality at least 20,
-   read depth at least 10, alternate-allele read fraction at least 0.25. Keeps 4,592,140.
+   read depth at least 10, alternate-allele fraction of the called allele at least
+   0.25. Multiallelic records are evaluated per genotype-called allele (the
+   September run indexed AD[1] regardless of GT). Keeps 4,592,493 records
+   (September's gate kept 4,592,140; the 353-record difference is multiallelic
+   records whose ALT1 failed the fraction gate while a called ALT2 passed).
 2. **Effect calling.** Variants are annotated against local GENCODE v47
-   MANE transcripts. Stop gained, frameshift, and splice-site changes count
-   as loss of function (LoF); missense and in-frame indels are scored
-   separately. Keeps 16,963 coding or splice candidates.
+   MANE transcripts. Stop gained, frameshift, and canonical splice
+   donor/acceptor variants count as loss of function (LoF); missense and
+   in-frame indels are scored separately; canonical intronic splice sites are
+   classified strand-aware (the earlier build overwrote them with
+   `splice_region`, which could not seed pairs). Keeps 12,952 coding or
+   splice candidates (the pre-correction carry was 16,963: phantom
+   minus-strand codon mismatches + splice LOF re-classification + multiallelic
+   decomposition; see `docs/CORRECTION_2026-09-29.md`).
 3. **Rarity.** Allele frequency from local gnomAD v4.1 exome sites; every
    record at a multi-record position is merged and alleles match exactly on
    (chrom, position, ref, alt). ClinVar joins as background evidence only.
@@ -43,8 +59,10 @@ measured from the run.
    disclosure on trans below) and homozygous damaging candidates
    (missense, stop-gain, in-frame indel). There is no allele-frequency gate
    at candidate collection: rarity enters only through the score (step 5).
-   Finds 2,372 pairs and 6,294 homozygous candidates (counter ==
-   written hom rows; no hidden thresholds).
+   Finds 2,211 pairs and 4,751 homozygous candidates (the emitted
+   `hom_singles` counter equals the written rows; the reversed-duplicate
+   inflation that produced 2,372 rows is deduplicated with a deterministic
+   orientation).
 5. **Scoring.** Each variant scores as a weighted mix: founder effect 0.45,
    predicted pathogenicity 0.60, rarity 0.30, plus phenotype similarity to
    the eight case HPO terms, weight 2.0. A pair scores as the stronger
