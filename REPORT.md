@@ -77,9 +77,12 @@ the analysis host, artifact hashes verified 2026-09-17) are traceable; the
 answer is therefore not an artifact of this pipeline's own code.
 
 The phenotype weight's influence is characterised the same way: at weight 0
-the true pair ranks 25 of 8,666 (epcr 0.6913); at the shipped weight 2.0 it
-ranks 1 (record: `desensitization.json` on the analysis host, verified
-2026-09-18). We disclose this dependence rather than hide it.
+the true pair ranks 14 of 6,962 (epcr 0.6913); at the shipped weight 2.0 it
+ranks 1 (record: `desensitization_audit19b.json` on the analysis host,
+measured 2026-10-19 on the definitive table, after the 2026-09-18 record
+measured 25 of 8,666 on the pre-corrected table and the subsequent
+sensitivity run measured 21 of 6,921 on the minus-strand-corrected table).
+We disclose this dependence rather than hide it.
 
 ## Reproduction
 

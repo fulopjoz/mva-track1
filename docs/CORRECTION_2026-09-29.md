@@ -152,9 +152,13 @@ The definitive rerun (`annot_full_audit19b.tsv`) implements it.
 
 Regenerated submission CSV from the definitive table: schema check
 PASSED (run host-side on the authorized host). Rank of the true pair
-without the phenotype term, on the definitive table: see
-`desensitization_audit19b.json` (ablation re-measured; value to be
-inserted by the authors when the scan completes — marked PENDING here).
+without the phenotype term, on the definitive table: **14** (with the
+phenotype term at weight 2.0 it remains 1) -- re-measured from
+`desensitization_audit19b.json`, production-reproduction gate
+QUALIFIED_REPRO_OK exact rows 6,962/6,962. (Stratification: 25 of 8,666 on
+2026-09-17's submission table; 21 of 6,921 on the September-corrected table;
+14 of 6,962 on the definitive splice-classification + multiallelic-corrected
+table. The disclosing prose in REPORT.md carries the same drift.)
 
 The phenotypic-ablation caution from the September correction stands:
 single case (n = 1), sensitivity observation, not robustness evidence.
