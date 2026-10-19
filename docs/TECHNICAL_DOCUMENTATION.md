@@ -14,7 +14,7 @@ The end-to-end result reported in *REPORT.md* is:
 - The top-ranked pair consists of:
   - *BUB1B p.Leu737Ter* (chr15:40,209,701 T>G, stop-gained, ClinVar allele ID 529272)
   - *BUB1B p.Asn1002Lys* (chr15:40,220,612 T>G, missense)
-- The second-ranked EPCR score is **0.5243**; a weight of **0 -> 2.0** on the HPO term changes the BUB1B pair's rank from [ABLA_R0] to **1** (see Section 4; the running table and
+- The second-ranked EPCR score is **0.5243**; a weight of **0 -> 2.0** on the HPO term changes the BUB1B pair's rank from **14** to **1** (see Section 4; the running table and
 headline scores are identical to the September-corrected head).
 
 No external APIs are invoked; all reference data are local files configured via `pipeline/conf/track1_config.yml`.
@@ -180,8 +180,8 @@ The weighted sum is normalised by the total weight and clamped to `(1e-6, 1.0]` 
 
 **Compound-het pair scoring** (`compound_het_score`) multiplies the stronger allele's internal score by the mean of the two scores (i.e. `0.5 + 0.5*min`) - a simple, monotonic function that favours pairs where both alleles are high-scoring.
 
-Changing the HPO weight from **2.0** to **0** lowers the BUB1B pair's rank to [ABLA_R0] (EPCR [ABLA_E0]) as
-documented in *REPORT.md* (record `desensitization_audit19b.json`).
+Changing the HPO weight from **2.0** to **0** lowers the BUB1B pair's rank to **14** (EPCR 0.6913) as
+documented in *REPORT.md* (record `desensitization_audit19b.json`, measured 2026-10-19).
 
 ---
 
