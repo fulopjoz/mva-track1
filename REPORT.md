@@ -25,6 +25,16 @@ alleles in the same gene does not by itself prove that they are in trans.
 | 7-10 | HLA-DRB1 founder pairs | 0.4509 |
 | 2,212 and below | homozygous-recessive singles (ordered after biallelic pairs by design) | — |
 
+**About the ordering, explicitly.** The two strata are ranked by the same
+score, but a candidate *pair* aggregates the evidence of two alleles and is
+the target entity of a biallelic-recessive retrieval task, so the output
+lists every pair before any homozygous single. That is the declared design,
+and it matters here: the highest-scoring singles in this run reach 0.6119,
+above the pair's 0.5823. Under a single global sort by raw score the true
+pair would rank **8**, not 1 — the interim global-order run measured
+exactly that and is recorded in the correction ledger; the ranking above is
+the pair-first declaration that the method text has always carried.
+
 Note: the September 17 table showed three KIF7 rows at ranks 8-10; those were
 produced by the minus-strand annotation error corrected on 2026-09-29
 (the "stop" became p.S1016S synonymous), and the September 29 corrected table

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Deterministic builds: git-based parity check only works if a rebuild is a no-op,
+# so fix the embedded XeLaTeX creation timestamp to the last source commit.
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-19700101}
 # Rebuild TRACK1_TECHNICAL_DOCUMENTATION.pdf (may be run from any directory; not via a symlink).
 set -euo pipefail
 here=${BASH_SOURCE[0]%/*}; [ "$here" = "${BASH_SOURCE[0]}" ] && here=.
