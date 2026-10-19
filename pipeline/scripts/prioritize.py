@@ -52,10 +52,14 @@ def iter_qc_variants(vcf_path, qc):
       - './.', './1', '1/.', '.|.' -> skipped (zygosity cannot be established;
         GQ/DP thresholds still apply to the record).
       - missing or malformed AD/DP -> skipped (fraction/depth unverifiable).
-      - zygosity: a1 != a2 -> 'het';  a1 == a2 > 0 -> 'hom_alt'.
+      - zygosity: a1 != a2 -> 'het'; a1 == a2 > 0 -> 'hom_alt'.
+        Haploid calls (GT row [allele, phased]) count as 'hom_alt' for the
+        called ALT (hemizygote, no het partner exists); ref calls skip.
+      - allele indices beyond ALT (spec-violating AD/GT, e.g. GT 0/2 on a
+        single-ALT record) are skipped, never crash downstream.
       - phased genotypes (a|b) decompose identically.
-    qc_pass counts (record, allele) pairs, so multiallelic het calls count once
-    per present allele; records with no emitted allele count zero.
+    qc_pass counts RECORDS with >=1 emitted allele (baseline-comparable with
+    earlier per-record runs), not (record, allele) pairs.
     """
     v = cyvcf2.VCF(vcf_path)
     n_in = n_pass = 0
@@ -67,12 +71,16 @@ def iter_qc_variants(vcf_path, qc):
         dp = rec.format('DP')[0][0] if 'DP' in rec.FORMAT else 0
         if gq < qc['min_gq'] or dp < qc['min_dp']:
             continue
-        a1, a2 = rec.genotypes[0][0], rec.genotypes[0][1]
+        row = rec.genotypes[0]
+        if len(row) < 3:
+            a1 = a2 = row[0]        # haploid: second element is the phased flag
+        else:
+            a1, a2 = row[0], row[1]
         if a1 < 0 or a2 < 0:            # partial or fully missing call
             continue
-        alt_idx = sorted({a for a in (a1, a2) if a > 0})
+        alt_idx = sorted({a for a in (a1, a2) if a > 0 and a <= len(rec.ALT)})
         if not alt_idx:
-            continue                    # 0/0
+            continue                    # 0/0, or only out-of-spec alleles
         ad = rec.format('AD')[0] if 'AD' in rec.FORMAT else None
         if ad is None:
             continue                    # cannot verify per-allele fraction
@@ -80,13 +88,16 @@ def iter_qc_variants(vcf_path, qc):
         if total <= 0:
             continue
         zyg = 'het' if a1 != a2 else 'hom_alt'
+        emitted = False
         for k in alt_idx:
             if k >= len(ad) or ad[k] < 0:
                 continue                # malformed AD entry for this allele
             if ad[k] / total < qc['min_alt_frac']:
                 continue
-            n_pass += 1
+            emitted = True
             yield rec, zyg, k
+        if emitted:
+            n_pass += 1
     print(f'[instrument] vcf_in={n_in} qc_pass={n_pass}', file=sys.stderr)
 
 
@@ -194,7 +205,7 @@ def main():
             by_gene[a['gene']].append(sv)
         else:
             singles.append(sv)
-    print(f'[instrument] coding_or_splice={n_coding} genes_with_hets={len(by_gene)} hom_singles_collected={len(singles)}',
+    print(f'[instrument] coding_or_splice={n_coding} genes_with_hets={len(by_gene)} hom_singles={len(singles)}',
           file=sys.stderr)
     if args.with_af:
         print(f'[instrument] af_absent={af_counts["absent"]} af_rare={af_counts["rare"]} '
@@ -232,40 +243,40 @@ def main():
                 seen_pair.add(pk)
                 pairs.append((gene, ka, kb, compound_het_score(ka, kb)))
 
-    # Emission ordering, one global list (audit T1-03): rows are ranked by the
-    # epcr score descending; ties break deterministically on record type
-    # (candidate pairs before homozygous singles), gene, then member key —
-    # never on input order. A variant that is part of any emitted pair is not
-    # repeated as a single.
+    # Emission ordering (explicitly specified design; audit T1-03b): rows are
+    # written as two strata — all compound-het CANDIDATE PAIRS first (a pair
+    # aggregates two alleles' evidence and is the challenge's target entity
+    # for a biallelic recessive case), then homozygous singles. Within each
+    # stratum, order is score-descending with deterministic tie-breaks
+    # (member key, gene); never on input order. A variant that is part of any
+    # emitted pair is never repeated as a single.
     seen = set()
-    for gene, ka, kb, s in pairs:
+    emission = []
+    for gene, ka, kb, s in sorted(pairs, key=lambda p: (-p[3], _vkey(p[1]) + _vkey(p[2]), p[0])):
+        emission.append(('pair', ka, kb))
         seen.add((ka.chrom, ka.pos))
         seen.add((kb.chrom, kb.pos))
-    emission = []
-    for gene, ka, kb, s in pairs:
-        emission.append((-s, 0, _vkey(ka) + _vkey(kb), gene, ('pair', ka, kb)))
-    for s_ in singles:
+    for s_ in sorted(singles, key=lambda z: -z.internal):
         if (s_.chrom, s_.pos) in seen:
             continue
-        emission.append((-s_.internal, 1, _vkey(s_), s_.gene or '', ('hom', s_)))
-    emission.sort(key=lambda t: (t[0], t[1], t[2], t[3]))
-    n_hom = sum(1 for e in emission if e[4][0] == 'hom')
-    print(f'[instrument] compound_het_pairs={len(pairs)} hom_singles_emitted={n_hom} excluded_other={n_other}', file=sys.stderr)
+        emission.append(('hom', s_))
+    n_hom = sum(1 for e in emission if e[0] == 'hom')
+    print(f'[instrument] compound_het_pairs={len(pairs)} hom_singles={n_hom} excluded_other={n_other}', file=sys.stderr)
 
     with open(out_tsv, 'w') as fh:
         fh.write('rank\ttype\tgene\tchrom_1\tpos_1\tref_1\talt_1\tchrom_2\tpos_2\tref_2\talt_2\t'
                  'epcr\tconsequence_1\tconsequence_2\tcadd_1\tcadd_2\n')
         rank = 0
-        for _, _, _, _, payload in emission:
+        for typ, *ps in emission:
             rank += 1
-            if payload[0] == 'pair':
-                x, y = payload[1], payload[2]
+            if typ == 'pair':
+                x, y = ps
                 s = compound_het_score(x, y)
                 fh.write(f'{rank}\tcompound_het\t{x.gene}\t{x.chrom}\t{x.pos}\t{x.ref}\t{x.alt}\t'
                          f'{y.chrom}\t{y.pos}\t{y.ref}\t{y.alt}\t{s:.4f}\t{x.consequence}\t{y.consequence}\t'
                          f'{"" if x.cadd_phred is None else x.cadd_phred}\t{"" if y.cadd_phred is None else y.cadd_phred}\n')
             else:
-                s_ = payload[1]
+                s_ = ps[0]
                 fh.write(f'{rank}\thom_alt\t{s_.gene}\t{s_.chrom}\t{s_.pos}\t{s_.ref}\t{s_.alt}\t\t\t\t\t'
                          f'{s_.internal:.4f}\t{s_.consequence}\t\t{"" if s_.cadd_phred is None else s_.cadd_phred}\t\n')
     print(f'[out] {out_tsv} rows={rank}', file=sys.stderr)
