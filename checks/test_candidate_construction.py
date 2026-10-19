@@ -123,3 +123,11 @@ def test_noncanonical_alleles_counted_not_dropped_silently(tmp_path):
     m = re.search(r'excluded_other=(\d+)', p.stderr)
     assert m is not None and int(m.group(1)) >= 1, \
         f'non-base allele excluded without instrumentation: {p.stderr}'
+
+
+def test_tied_singles_deterministic_tiebreak(tmp_path):
+    """Round-2 review defect: tied hom singles ordered differently under input
+    reversal (no tie-break within the singles stratum). Pin the key behaviour."""
+    a = run(tmp_path, [hom(111), hom(150)])
+    b = run(tmp_path, [hom(150), hom(111)])
+    assert a == b
