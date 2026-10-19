@@ -163,7 +163,10 @@ pair_score = max(a, b) * (0.5 + 0.5 * min(a, b))
 
 ## 4. Scoring / Prioritisation Model Details
 
-The **WorkPrior** model combines four evidence components into the EPCR probability estimate:
+The **WorkPrior** model combines four evidence components into the EPCR score
+(a bounded heuristic rank score in (0, 1], written into the challenge's EPCR
+column; it is **not an empirically calibrated probability**, and no calibration
+study exists supporting reading it as absolute risk):
 
 | Component | Weight (config) | Description | Implementation reference |
 |---|---|---|---|

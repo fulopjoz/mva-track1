@@ -9,9 +9,13 @@ The pipeline ranks the clinically confirmed genotype first of 8,666
 candidates: compound-heterozygous **BUB1B p.Leu737Ter**
 (chr15:40,209,701 T>G, stop gained; ClinVar allele ID 529272) plus
 **BUB1B p.Asn1002Lys** (chr15:40,220,612 T>G, missense), score 0.5823.
-Score at rank 2 is 0.5243. The score column `epcr` — estimated probability
-of causal relationship, the challenge-defined (0, 1] score — equals the
-pipeline ranking score.
+Score at rank 2 is 0.5243. The score column `epcr` — the challenge-defined
+(0, 1] score slot ("estimated probability of causal relationship") — is
+populated by the pipeline's composite weighting. It is a bounded heuristic
+rank score, **not an empirically calibrated probability** (no calibration
+validation exists for this score calibration label; see Section *Method*).
+Pairs listed are phase-unknown *candidates* — presence of two compound
+alleles in the same gene does not by itself prove that they are in trans.
 
 | Rank | Genotype | Score |
 |---|---|---|
