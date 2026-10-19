@@ -256,7 +256,7 @@ def main():
         emission.append(('pair', ka, kb))
         seen.add((ka.chrom, ka.pos))
         seen.add((kb.chrom, kb.pos))
-    for s_ in sorted(singles, key=lambda z: -z.internal):
+    for s_ in sorted(singles, key=lambda z: (-z.internal, _vkey(z))):
         if (s_.chrom, s_.pos) in seen:
             continue
         emission.append(('hom', s_))
