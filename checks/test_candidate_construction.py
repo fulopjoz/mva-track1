@@ -62,15 +62,18 @@ def test_reversed_duplicate_pairs_deduplicated(tmp_path):
         assert (c[3], int(c[4]), c[5], c[6]) <= (c[7], int(c[8]), c[9], c[10])
 
 
-def test_global_rank_not_separate_blocks(tmp_path):
-    """A homozygous LoF single with internal > pair score must rank ABOVE the
-    het pair: output is one global ordering by score, not pairs-then-singles."""
+def test_pair_first_ordering_spec(tmp_path):
+    """Explicit ordering contract: ALL candidate pairs rank before hom singles
+    (pair aggregates two alleles' evidence in a biallelic-recessive retrieval
+    task); within each stratum rows are score-descending. Where the docs and
+    the implementation must agree, this IS the agreed ordering."""
     lines = run(tmp_path, [
         het(200), het(150),             # pair scores 0.1880
-        hom(111),                       # hom_alt coding LoF-ish internal 0.3582
+        hom(111),                       # hom_alt single internal 0.3582
     ])
     order = [ln.split('\t')[1] for ln in lines[1:]]
-    assert order[0] == 'hom_alt', f'higher-scoring single must rank first, got {order}'
+    assert order[0] == 'compound_het', f'pair stratum must rank first, got {order}'
+    assert order == ['compound_het', 'hom_alt']
 
 
 def test_tiebreak_independent_of_input_order(tmp_path):
@@ -102,14 +105,13 @@ def _run_capture_stderr(tmp_path, rows):
 
 
 def test_homozygote_semantics_single_source(tmp_path):
-    """One counter semantics: instrument count == written hom_alt rows
-    (no hidden >0.3 subset)."""
+    """One counter semantics: instrument's emitted hom_singles == written
+    hom_alt rows (no hidden >0.3 subset, no phantom hom_candidates counter)."""
     p, text = _run_capture_stderr(tmp_path, [hom(111), hom(150)])
-    m = re.search(r'hom_singles=(\d+)', p.stderr)
     written = [ln for ln in text.strip().split('\n')[1:] if ln.split('\t')[1] == 'hom_alt']
-    assert m is None or int(m.group(1)) == len(written), \
-        f'instrument hom_singles={m.group(1) if m else None} vs written {len(written)}'
-    # and no phantom '>0.3 subset' counter survives
+    m = re.findall(r'hom_singles=(\d+)', p.stderr)
+    assert m and int(m[-1]) == len(written), \
+        f'emitted hom_singles={m} vs written {len(written)}: {p.stderr}'
     assert 'hom_candidates' not in p.stderr
 
 

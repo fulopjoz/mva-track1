@@ -39,9 +39,12 @@ measured from the run.
    record at a multi-record position is merged and alleles match exactly on
    (chrom, position, ref, alt). ClinVar joins as background evidence only.
 4. **Candidate pairing.** Compound-heterozygous pairs (an LoF allele plus a
-   second damaging allele in the same gene; phase not required), rare
-   homozygous missense, rare homozygous stop gain, rare homozygous in-frame
-   indels. Finds 2,372 pairs and 6,294 homozygous candidates.
+   second damaging allele in the same gene; phase unknown -- see the
+   disclosure on trans below) and homozygous damaging candidates
+   (missense, stop-gain, in-frame indel). There is no allele-frequency gate
+   at candidate collection: rarity enters only through the score (step 5).
+   Finds 2,372 pairs and 6,294 homozygous candidates (counter ==
+   written hom rows; no hidden thresholds).
 5. **Scoring.** Each variant scores as a weighted mix: founder effect 0.45,
    predicted pathogenicity 0.60, rarity 0.30, plus phenotype similarity to
    the eight case HPO terms, weight 2.0. A pair scores as the stronger

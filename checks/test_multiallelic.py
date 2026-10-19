@@ -133,3 +133,41 @@ def test_uncalled_alt_cannot_seed_pair(tmp_path):
         '1\t200\t.\tA\tC,G\t99\tPASS\t.\tGT:GQ:DP:AD\t0/1:99:40:20,20,0',
     ])
     assert len(lines) == 1, f'expected header only (no pair), got {lines}'
+
+
+# ---------- review-ND regressions (2026-10-19 adversarial review) ----------
+import io
+import re
+
+
+def test_haploid_gt_is_hom_alt_not_het(tmp_path):
+    """cyvcf2 represents haploid GTs as [allele, phased] (length 2): the phase
+    bool must NOT be read as a second allele index (would mislabel hemizygous
+    ALT calls as 'het' and let them seed bogus pairs with founder 0.65)."""
+    got = iter_cases(tmp_path, ["1\t500\t.\tA\tG\t99\tPASS\t.\tGT:GQ:DP:AD\t1:99:40:12,28"])
+    assert got == [('1', 500, 1, 'hom_alt')]
+
+
+def test_ad_longer_than_alt_list_emits_nothing_crashfree(tmp_path):
+    """Spec-violating but real-world record: GT 0/2 on a single-ALT record
+    whose AD has 3 values. Emission must skip allele indices beyond ALT,
+    producing nothing here and never crashing (downstream would IndexError)."""
+    rows = ['1\t500\t.\tA\tG\t99\tPASS\t.\tGT:GQ:DP:AD\t0/2:99:40:10,0,20']
+    got = iter_cases(tmp_path, rows)
+    assert all(k <= len(rec.ALT) for rec, _, k in got) or got == []
+    assert got == []
+
+
+def test_qc_pass_counts_records_not_alleles(tmp_path):
+    """A 1/2 record with two usable alleles is ONE QC-passing record."""
+    rows = [r(500, alt='C,G', gt='1/2', ad='10,15,15'), r(600, ad='10,25')]
+    vcf = write_vcf(tmp_path, rows)
+    buf = io.StringIO()
+    old = sys.stderr
+    sys.stderr = buf
+    try:
+        _ = list(prioritize.iter_qc_variants(str(vcf), QC))
+    finally:
+        sys.stderr = old
+    mm = re.search(r'qc_pass=(\d+)', buf.getvalue())
+    assert mm is not None and int(mm.group(1)) == 2, buf.getvalue()
