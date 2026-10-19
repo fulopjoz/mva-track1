@@ -121,9 +121,18 @@ reference files.
 
 ## Disclosure
 
-Built with AI assistance (Kimi K3 via Oh My Pi); no patient data left the
-analysis hosts and none was sent to any external API, per the challenge
-rules.
+Built with AI assistance, per the challenge's 2026-08-28 disclosure guidance:
+**provider** Kimi K3 via the Oh My Pi harness on the e-INFRA CZ hosted academic
+gateway (plus Anthropic Claude sessions operated by the team on the same
+machine); **plan/tier** per account; **data handling** — the Track-1 patient
+VCF never left the whitelisted analysis host dichtator and no patient sequence
+data was sent to any external API. One incident is logged openly
+(2026-10-19): a debugging step printed the top-ranked rows of the corrected
+ranking table (coordinates and alleles) and the first rows of the regenerated
+submission CSV into the active AI session; see `AUDIT_RESOLUTION.md`,
+"Disclosure note for the GenAI-use record". The pipeline, annotation joins,
+full ranking tables and clinical outputs otherwise ran and stayed on the
+approved host.
 
 ## Data availability
 
