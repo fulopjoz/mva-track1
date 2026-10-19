@@ -3,7 +3,7 @@
 Team `fulopjoz` (individual). Task: find the disease-causing genotype in one
 whole-genome sequencing dataset of a child with a rare disease.
 
-**Result: BUB1B p.Leu737Ter + p.Asn1002Lys, rank 1 of 8,666 candidates
+**Result: BUB1B p.Leu737Ter + p.Asn1002Lys, rank 1 of 6,962 candidates
 (score 0.5823)** — the clinically confirmed compound-heterozygous diagnosis,
 found in one pass over 5,012,204 variants (1 h 31 min, 48-core workstation,
 CPU only).
@@ -30,7 +30,7 @@ gene-to-phenotype map). Then:
 ```bash
 python3 pipeline/scripts/prioritize.py \
     --conf pipeline/conf/track1_config.yml --with-af --with-hpo \
-    --out output/annot_full.tsv          # VCF -> ranked table (8,666 rows)
+    --out output/annot_full.tsv          # VCF -> ranked table (6,962 rows)
 
 python3 pipeline/scripts/make_submission_csv.py \
     --in output/annot_full.tsv --out submission_track1.csv
