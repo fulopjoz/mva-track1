@@ -88,3 +88,77 @@ measured; the submission is being regenerated and checked. Separately, an earlie
 scorer stub is withdrawn and replaced by a re-measurement (rank 21 without
 the phenotype term, 1 with it). This is a single case; the numbers are
 sensitivity observations.
+
+---
+
+# Amendment 2026-10-19: independent audit, splice-classification and multiallelic corrections
+
+## Additional findings and fixes
+An independent focused audit (private package received 2026-10-19; findings
+reproduced on synthetic cases, blob SHAs matching repository state at the
+time) reported three further defects in the same annotate/prioritize core,
+plus ordering questions. All are fixed and regression-tested on branch
+`fix/audit-2026-10-19-t1` (51 new regression/integration tests, suite 154
+green including the September minus-strand check):
+
+- **Canonical intronic splice donor/acceptor calls were overwritten with
+  `splice_region`** (audit T1-01). Genuine loss-of-function splice alleles
+  could not seed compound-het pairs. Now classified strand-aware (donor =
+  the first two intronic bases in transcription order; acceptor = the last
+  two), on both strands; the region label applies only to non-canonical
+  near-edge positions (3-8 nt).
+- **Multiallelic records were evaluated from AD[1] regardless of the called
+  allele, and every ALT was processed even when absent from the genotype**
+  (audit T1-02). Quality control and downstream processing are now
+  allele-faithful: the genotype is decomposed, per-allele fraction gates
+  on the called allele's own AD entry, malformed/missing AD/DP or
+  partial/fully missing calls skip the record, haploid calls count as
+  hom_alt (hemizygote), and out-of-spec allele indices (AD longer than the
+  ALT list) are skipped without crashing.
+- **Candidate construction inconsistencies** (audit T1-03): reversed
+  duplicate compound-het rows deduplicated with a deterministic,
+  position-sorted orientation; the phantom `hom_candidates` >0.3 subset
+  counter that agreed with nothing written was removed (the emitted
+  `hom_singles` counter equals the written homozygous rows); tie-breaking
+  made input-order independent in both strata (round-2 review caught a
+  missing tie-break within the singles stratum, also fixed); non-base
+  alleles are counted via `excluded_other` instead of vanishing silently.
+
+## Ordering specification incident (recorded, not hidden)
+The audit also questioned the ordering of the two output strata (candidate
+pairs vs homozygous singles). An interim single-list global sort was
+implemented and produced a valid but off-design interim table on the
+authorized host (`annot_full_audit19.tsv`, 6,962 rows): under it, the
+highest-scoring homozygous singles (~0.61) outranked the true pair (0.5823)
+and the true pair's rank was 8. For this biallelic-recessive retrieval
+task the declared ordering — candidate pairs first, then homozygous singles
+— is the right retrieval structure (it is what this report had always
+declared in prose); the fix was to put that specification explicitly into
+the emission code and pin it with a test, not to keep the global ordering.
+The definitive rerun (`annot_full_audit19b.tsv`) implements it.
+
+## Updated全程 numbers from the definitive rerun (2026-10-19)
+
+| Quantity | September 17 submission | September 29 (minus-strand fix) | Definitive 2026-10-19 |
+|---|---|---|---|
+| ranked rows | 8,666 | 6,921 | **6,962** |
+| compound-het pairs | 2,372 | 2,170 | **2,211** (dedupe + legitimate LoF-splice seeding) |
+| homozygous candidates (rows) | 6,294 | 4,751 | **4,751** |
+| coding-or-splice candidates | 16,963 | 12,950 | **12,952** |
+| QC pass (records) | 4,592,140 | 4,592,140 | **4,592,493** (+353: GT-faithful multiallelic rescue) |
+| ClinVar hits | — | 4,067 | **4,067** |
+| rank of the true causal pair | 1 | 1 | **1** |
+| pair score (epcr) | 0.5823 | 0.5823 | **0.5823** |
+
+Regenerated submission CSV from the definitive table: schema check
+PASSED (run host-side on the authorized host). Rank of the true pair
+without the phenotype term, on the definitive table: **14** (with the
+phenotype term at weight 2.0 it remains 1) -- re-measured from
+`desensitization_audit19b.json`, production-reproduction gate
+QUALIFIED_REPRO_OK exact rows 6,962/6,962. (Stratification: 25 of 8,666 on
+2026-09-17's submission table; 21 of 6,921 on the September-corrected table;
+14 of 6,962 on the definitive splice-classification + multiallelic-corrected
+table. The disclosing prose in REPORT.md carries the same drift.)
+
+The phenotypic-ablation caution from the September correction stands:
+single case (n = 1), sensitivity observation, not robustness evidence.

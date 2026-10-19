@@ -167,10 +167,6 @@ class LocalAnnotator:
         edges = [x for ex in t.exons for x in ex]
         dist = min(abs(pos - e) for e in edges)
         ann['splice_dist'] = dist
-        if dist <= 2:
-            ann['consequence'] = 'splice_donor' if (pos - min(edges)) % 1 == 0 else 'splice_acceptor'
-            # donor = start of intron after exon on strand; acceptor = end. Simplify: edge-near = splice
-            ann['consequence'] = 'splice_donor' if dist <= 1 else 'splice_acceptor'
         if in_cds:
             self._coding(ann, t, chrom, pos, ref, alt)
             return
@@ -183,7 +179,32 @@ class LocalAnnotator:
             if dist <= 8:
                 ann['consequence'] += '|splice_region'
             return
-        ann['consequence'] = 'intronic' if dist > 8 else 'splice_region'
+        # Intronic: strand-aware canonical splice sites (audit T1-01). The
+        # donor dinucleotide is the intron's first two bases in transcription
+        # order, the acceptor its last two. For '+' strand donors sit at the
+        # low-coordinate end of the intron, for '-' strand at the high end.
+        # A previous version assigned then overwrote these with splice_region,
+        # so canonical intronic LoF alleles could not seed compound-het pairs.
+        ann['consequence'] = self._intron_class(t, pos, dist)
+
+    @staticmethod
+    def _intron_class(t, pos, dist):
+        exs = t.exons
+        for (s1, e1), (s2, e2) in zip(exs, exs[1:]):
+            if not (e1 + 1 <= pos <= s2 - 1):
+                continue
+            if t.strand == '+':
+                donor = (e1 + 1, e1 + 2)
+                acceptor = (s2 - 2, s2 - 1)
+            else:
+                donor = (s2 - 2, s2 - 1)
+                acceptor = (e1 + 1, e1 + 2)
+            if pos in donor:
+                return 'splice_donor'
+            if pos in acceptor:
+                return 'splice_acceptor'
+            return 'splice_region' if dist <= 8 else 'intronic'
+        return 'splice_region' if dist <= 8 else 'intronic'
 
     def _coding(self, ann, t, chrom, pos, ref, alt):
         if not re.fullmatch(f'[{BASES}]+', ref) or not re.fullmatch(f'[{BASES}]+', alt):

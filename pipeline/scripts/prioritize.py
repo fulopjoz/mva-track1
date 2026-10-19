@@ -42,6 +42,25 @@ def load_conf(path):
 
 
 def iter_qc_variants(vcf_path, qc):
+    """Yield (record, zygosity, alt_index) for each allele actually present in
+    the sample genotype of a QC-passing record (audit T1-02).
+
+    The sample genotype is decomposed: multiallelic records contribute only
+    the ALT alleles called in GT, and the alternate fraction is that
+    allele's own AD divided by the record's depth sum. Records have a single
+    sample, per the pipeline's design contract.
+      - './.', './1', '1/.', '.|.' -> skipped (zygosity cannot be established;
+        GQ/DP thresholds still apply to the record).
+      - missing or malformed AD/DP -> skipped (fraction/depth unverifiable).
+      - zygosity: a1 != a2 -> 'het'; a1 == a2 > 0 -> 'hom_alt'.
+        Haploid calls (GT row [allele, phased]) count as 'hom_alt' for the
+        called ALT (hemizygote, no het partner exists); ref calls skip.
+      - allele indices beyond ALT (spec-violating AD/GT, e.g. GT 0/2 on a
+        single-ALT record) are skipped, never crash downstream.
+      - phased genotypes (a|b) decompose identically.
+    qc_pass counts RECORDS with >=1 emitted allele (baseline-comparable with
+    earlier per-record runs), not (record, allele) pairs.
+    """
     v = cyvcf2.VCF(vcf_path)
     n_in = n_pass = 0
     for rec in v:
@@ -50,17 +69,35 @@ def iter_qc_variants(vcf_path, qc):
             continue
         gq = rec.format('GQ')[0][0] if 'GQ' in rec.FORMAT else 99
         dp = rec.format('DP')[0][0] if 'DP' in rec.FORMAT else 0
-        ad = rec.format('AD')[0] if 'AD' in rec.FORMAT else None
         if gq < qc['min_gq'] or dp < qc['min_dp']:
             continue
-        alt_frac = (ad[1] / ad.sum()) if ad is not None and ad.sum() else 0.0
-        if alt_frac < qc['min_alt_frac']:
+        row = rec.genotypes[0]
+        if len(row) < 3:
+            a1 = a2 = row[0]        # haploid: second element is the phased flag
+        else:
+            a1, a2 = row[0], row[1]
+        if a1 < 0 or a2 < 0:            # partial or fully missing call
             continue
-        gt = rec.gt_types[0]  # 0=HOM_REF 1=HET 2=UNKNOWN 3=HOM_ALT
-        if gt not in (1, 3):
+        alt_idx = sorted({a for a in (a1, a2) if a > 0 and a <= len(rec.ALT)})
+        if not alt_idx:
+            continue                    # 0/0, or only out-of-spec alleles
+        ad = rec.format('AD')[0] if 'AD' in rec.FORMAT else None
+        if ad is None:
+            continue                    # cannot verify per-allele fraction
+        total = ad.sum() if len(ad) else 0
+        if total <= 0:
             continue
-        n_pass += 1
-        yield rec, ('het' if gt == 1 else 'hom_alt')
+        zyg = 'het' if a1 != a2 else 'hom_alt'
+        emitted = False
+        for k in alt_idx:
+            if k >= len(ad) or ad[k] < 0:
+                continue                # malformed AD entry for this allele
+            if ad[k] / total < qc['min_alt_frac']:
+                continue
+            emitted = True
+            yield rec, zyg, k
+        if emitted:
+            n_pass += 1
     print(f'[instrument] vcf_in={n_in} qc_pass={n_pass}', file=sys.stderr)
 
 
@@ -123,48 +160,51 @@ def main():
         return _hpo_cache[gene]
 
     n_coding = 0
+    n_other = 0
     af_counts = {'absent': 0, 'rare': 0, 'common': 0, 'no_chrom_file': 0}
     n_clinvar = 0
     by_gene = defaultdict(list)
     singles = []
-    for rec, zyg in iter_qc_variants(vcf, qc):
+    for rec, zyg, k in iter_qc_variants(vcf, qc):
         if args.chrom and rec.CHROM != args.chrom:
             continue
-        for ai, alt in enumerate(rec.ALT):
-            a = ann.annotate(rec.CHROM, rec.POS, rec.REF, [alt])[0]
-            cons = (a['consequence'] or '').split('|')[0]
-            interesting = cons in (prior.lof_terms | prior.missense_terms | prior.inframe_terms) \
-                or cons.startswith('splice')
-            if not interesting:
-                continue
-            n_coding += 1
-            af = None
-            clin_sig = clin_dn = None
-            if args.with_af:
-                af = gnomad.af(rec.CHROM, rec.POS, rec.REF, alt)
-                if af is None:
-                    af_counts['no_chrom_file'] += 1
-                elif af == 0:
-                    af_counts['absent'] += 1
-                elif af < prior.max_rare:
-                    af_counts['rare'] += 1
-                else:
-                    af_counts['common'] += 1
-                clin_sig, clin_dn = clinvar.lookup(rec.CHROM, rec.POS, rec.REF, alt)
-                if clin_sig:
-                    n_clinvar += 1
-            sv = ScoredVariant(rec.CHROM, rec.POS, rec.REF, alt,
-                               gene=a['gene'], zygosity=zyg,
-                               consequence=cons, cadd_phred=a['cadd_phred'],
-                               af=af, hpo_score=gene_hpo(a['gene']))
-            if args.with_af and clin_sig:
-                sv.clinvar_sig = clin_sig
-                sv.clinvar_disease = clin_dn
-            prior.internal(sv)
-            if zyg == 'het':
-                by_gene[a['gene']].append(sv)
+        alt = rec.ALT[k - 1]  # GT allele index k (>=1) -> ALT[k-1]
+        a = ann.annotate(rec.CHROM, rec.POS, rec.REF, [alt])[0]
+        cons = (a['consequence'] or '').split('|')[0]
+        interesting = cons in (prior.lof_terms | prior.missense_terms | prior.inframe_terms) \
+            or cons.startswith('splice')
+        if not interesting:
+            if cons == 'other':
+                n_other += 1
+            continue
+        n_coding += 1
+        af = None
+        clin_sig = clin_dn = None
+        if args.with_af:
+            af = gnomad.af(rec.CHROM, rec.POS, rec.REF, alt)
+            if af is None:
+                af_counts['no_chrom_file'] += 1
+            elif af == 0:
+                af_counts['absent'] += 1
+            elif af < prior.max_rare:
+                af_counts['rare'] += 1
             else:
-                singles.append(sv)
+                af_counts['common'] += 1
+            clin_sig, clin_dn = clinvar.lookup(rec.CHROM, rec.POS, rec.REF, alt)
+            if clin_sig:
+                n_clinvar += 1
+        sv = ScoredVariant(rec.CHROM, rec.POS, rec.REF, alt,
+                           gene=a['gene'], zygosity=zyg,
+                           consequence=cons, cadd_phred=a['cadd_phred'],
+                           af=af, hpo_score=gene_hpo(a['gene']))
+        if args.with_af and clin_sig:
+            sv.clinvar_sig = clin_sig
+            sv.clinvar_disease = clin_dn
+        prior.internal(sv)
+        if zyg == 'het':
+            by_gene[a['gene']].append(sv)
+        else:
+            singles.append(sv)
     print(f'[instrument] coding_or_splice={n_coding} genes_with_hets={len(by_gene)} hom_singles={len(singles)}',
           file=sys.stderr)
     if args.with_af:
@@ -177,8 +217,16 @@ def main():
                   f'pos-sorted per chromosome; results exact via scan cache, but check input',
                   file=sys.stderr)
 
-    # compound-het pairing per config rule: same gene, >=2 founders(het), phase-unknown ok
+    # Compound-het candidate pairing per config rule: same gene, >=2 LoF/het
+    # founders; phase unknown accepted (candidates, NOT confirmed trans).
+    # (x,y) and (y,x) are ONE candidate; members are written position-sorted
+    # for a deterministic orientation (audit T1-03).
+    def _vkey(x):
+        ch = (1, int(x.chrom)) if str(x.chrom).isdigit() else (2, str(x.chrom))
+        return ch + (x.pos, x.ref, x.alt)
+
     pairs = []
+    seen_pair = set()
     for gene, vs in by_gene.items():
         if gene is None or len(vs) < 2:
             continue
@@ -188,29 +236,49 @@ def main():
             for y in het_dmg:
                 if y is x:
                     continue
-                pairs.append((gene, x, y, compound_het_score(x, y)))
-    pairs.sort(key=lambda p: -p[3])
-    n_hom = [s for s in singles if s.internal > 0.3]
-    print(f'[instrument] compound_het_pairs={len(pairs)} hom_candidates={len(n_hom)}', file=sys.stderr)
+                ka, kb = sorted((x, y), key=_vkey)
+                pk = _vkey(ka) + _vkey(kb)
+                if pk in seen_pair:
+                    continue
+                seen_pair.add(pk)
+                pairs.append((gene, ka, kb, compound_het_score(ka, kb)))
+
+    # Emission ordering (explicitly specified design; audit T1-03b): rows are
+    # written as two strata — all compound-het CANDIDATE PAIRS first (a pair
+    # aggregates two alleles' evidence and is the challenge's target entity
+    # for a biallelic recessive case), then homozygous singles. Within each
+    # stratum, order is score-descending with deterministic tie-breaks
+    # (member key, gene); never on input order. A variant that is part of any
+    # emitted pair is never repeated as a single.
+    seen = set()
+    emission = []
+    for gene, ka, kb, s in sorted(pairs, key=lambda p: (-p[3], _vkey(p[1]) + _vkey(p[2]), p[0])):
+        emission.append(('pair', ka, kb))
+        seen.add((ka.chrom, ka.pos))
+        seen.add((kb.chrom, kb.pos))
+    for s_ in sorted(singles, key=lambda z: (-z.internal, _vkey(z))):
+        if (s_.chrom, s_.pos) in seen:
+            continue
+        emission.append(('hom', s_))
+    n_hom = sum(1 for e in emission if e[0] == 'hom')
+    print(f'[instrument] compound_het_pairs={len(pairs)} hom_singles={n_hom} excluded_other={n_other}', file=sys.stderr)
 
     with open(out_tsv, 'w') as fh:
         fh.write('rank\ttype\tgene\tchrom_1\tpos_1\tref_1\talt_1\tchrom_2\tpos_2\tref_2\talt_2\t'
                  'epcr\tconsequence_1\tconsequence_2\tcadd_1\tcadd_2\n')
         rank = 0
-        seen = set()
-        for gene, x, y, s in pairs:
+        for typ, *ps in emission:
             rank += 1
-            fh.write(f'{rank}\tcompound_het\t{gene}\t{x.chrom}\t{x.pos}\t{x.ref}\t{x.alt}\t'
-                     f'{y.chrom}\t{y.pos}\t{y.ref}\t{y.alt}\t{s:.4f}\t{x.consequence}\t{y.consequence}\t'
-                     f'{"" if x.cadd_phred is None else x.cadd_phred}\t{"" if y.cadd_phred is None else y.cadd_phred}\n')
-            seen.add((x.chrom, x.pos))
-            seen.add((y.chrom, y.pos))
-        for s_ in sorted(singles, key=lambda z: -z.internal):
-            if (s_.chrom, s_.pos) in seen:
-                continue
-            rank += 1
-            fh.write(f'{rank}\thom_alt\t{s_.gene}\t{s_.chrom}\t{s_.pos}\t{s_.ref}\t{s_.alt}\t\t\t\t\t'
-                     f'{s_.internal:.4f}\t{s_.consequence}\t\t{"" if s_.cadd_phred is None else s_.cadd_phred}\t\n')
+            if typ == 'pair':
+                x, y = ps
+                s = compound_het_score(x, y)
+                fh.write(f'{rank}\tcompound_het\t{x.gene}\t{x.chrom}\t{x.pos}\t{x.ref}\t{x.alt}\t'
+                         f'{y.chrom}\t{y.pos}\t{y.ref}\t{y.alt}\t{s:.4f}\t{x.consequence}\t{y.consequence}\t'
+                         f'{"" if x.cadd_phred is None else x.cadd_phred}\t{"" if y.cadd_phred is None else y.cadd_phred}\n')
+            else:
+                s_ = ps[0]
+                fh.write(f'{rank}\thom_alt\t{s_.gene}\t{s_.chrom}\t{s_.pos}\t{s_.ref}\t{s_.alt}\t\t\t\t\t'
+                         f'{s_.internal:.4f}\t{s_.consequence}\t\t{"" if s_.cadd_phred is None else s_.cadd_phred}\t\n')
     print(f'[out] {out_tsv} rows={rank}', file=sys.stderr)
 
 
