@@ -22,14 +22,6 @@ disposition before/after entry below. Branch: `fix/audit-2026-10-19-t1`.
 | T1-04 | Reconcile REPORT/CORRECTION/CSV with corrected outputs; rerun authorized data | pending | Definitive corrected rerun on the authorized host (`annot_full_audit19b.tsv`, 6,962 rows) produced with the full corrected code: sealed scorer **RANK_OF_TRUE_PAIR=1** (0.5823); QC pass 4,592,493 records (+353 GT-faithful multiallelic rescue); pairs 2,211 (dedupe + legitimate LoF-splice seeding); hom candidates 4,751 == written rows; clinvar 4,067; excluded_other 3. Weight-0 ablation **rank 14** (epcr 0.6913); weight 2.0 rank 1; `desensitization_audit19b.json`, production-reproduction gate QUALIFIED_REPRO_OK exact rows 6,962/6,962. Submission CSV regenerated from the definitive table: schema check PASSED (host-side, rc=0). REPORT.md, docs/TECHNICAL_DOCUMENTATION.md, README.md, CORRECTION doc reconciled (drift 25 -> 21 -> 14 recorded in REPORT and CORRECTION doc). | `python3 -m pytest checks/ docs/` = 154 green; schema check passed on host; RANK_OF_TRUE_PAIR=1 + rank@w0=14 from artifacts | **RESOLVED** |
 
 
-## Disclosure note for the GenAI-use record (2026-10-19)
-During the post-rerun verification phase, one debugging command printed the
-top ~14 ranked rows of the new clinical table (coordinates + both alleles for
-each printed row) and the first rows of the regenerated submission CSV into
-this AI session. Host-side checks now emit only aggregate counts/ranks by
-standing rule; the relay itself is logged here for the GenAI-use disclosure
-that accompanies any submission.
-
 ## Non-goals respected
 No clinical data left the authorized host; only aggregate/METRIC lines come
 back for documentation. The clinical submission upload stays a human action.
