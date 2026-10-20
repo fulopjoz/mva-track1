@@ -30,7 +30,7 @@ No external APIs are invoked; all reference data are local files configured via 
 | **pysam** | `vcf.py::GnomadAfJoin`, `::ClinVarJoin`; `annotate.py::LocalAnnotator` | HTSlib wrapper; FASTA, Tabix | [pysam.readthedocs.io](https://pysam.readthedocs.io/en/latest/) |
 | **PyYAML** | `prioritize.py::load_conf`; self-tests (`annotate.py`, `_hpo.py`) | YAML configuration parsing | [pyyaml.org/docs](https://pyyaml.org/wiki/PyYAMLDocumentation) |
 | **matplotlib** (Agg) | `docs/figures/pipeline_figure.py` | overview-figure graphics | [matplotlib.org](https://matplotlib.org/stable/) |
-| **pandoc** ≥ 2.19 | `docs/build_pdf.sh` | Markdown → PDF conversion | [pandoc.org/MANUAL](https://pandoc.org/MANUAL.html) |
+| **pandoc** 2.19 or later | `docs/build_pdf.sh` | Markdown → PDF conversion | [pandoc.org/MANUAL](https://pandoc.org/MANUAL.html) |
 
 *No other third-party libraries (e.g. pandas, NumPy) are imported by the pipeline code.*
 
