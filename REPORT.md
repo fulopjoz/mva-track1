@@ -109,11 +109,25 @@ reference files.
 
 ## Disclosure
 
-Built with AI assistance, in line with the challenge's 2026-08-28 disclosure
-guidance: provider Kimi K3 via the Oh My Pi harness on the e-INFRA CZ academic
-gateway, plan/tier per account. Data handling: patient data and pipeline
-outputs were processed and stored on approved analysis hosts. Human sign-off
-precedes any submission use.
+AI assistance disclosure, in the shape requested by the challenge's 2026-08-28
+guidance:
+
+- Anthropic API, Claude (via Claude Code), commercial terms, no training on
+  customer content.
+- e-INFRA CZ academic gateway (via the Oh My Pi harness), Kimi K3 and GLM-5.3,
+  academic service terms.
+
+Patient files (reads, variant tables, phenotype document) were fenced from the
+assistants by a pre-tool hook and never read. Pipeline runs on patient data
+stayed on the approved analysis hosts and returned numeric metrics by design.
+Limited case-linked summary content did reach the providers during development:
+allele letters and consequence labels of four archived pipeline tuples; gene
+names, row counts and rank numbers of submitted rows, relayed by the
+orchestrating session; and one debugging relay that printed ranked candidate
+rows (coordinates and alleles) into an e-INFRA session before being stopped
+mid-stream, with no content decisions taken from it. No raw reads, VCF records,
+genotypes or phenotype text were sent to any assistant. Human sign-off precedes
+any submission use.
 
 ## Data availability
 
