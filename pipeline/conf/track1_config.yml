@@ -2,9 +2,9 @@
 
 # Paths and settings for the input VCF and reference genome.
 data:
-  vcf: "~/hf-rare/data/WGS_EX2312012_HGWCNDSX7.vcf.gz"  # on dichtator
+  vcf: "~/hf-rare/data/case.vcf.gz"  # on dichtator (filename redacted for the public repo)
   vcf_chr_prefix: false  # contigs are '15' (no 'chr')
-  sample: "WGS_EX2312012"
+  sample: "CASE"
   build: "GRCh38"
 
 # Reference files used by the pipeline (paths may be host‑specific).
